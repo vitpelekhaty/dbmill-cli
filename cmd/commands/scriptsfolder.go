@@ -2,6 +2,8 @@ package commands
 
 import (
 	"github.com/spf13/cobra"
+
+	"github.com/vitpelekhaty/dbmill-cli/cmd/engine"
 )
 
 // cmdScriptsFolder команда создания скриптов на основе схемы
@@ -15,5 +17,11 @@ var cmdScriptsFolder = &cobra.Command{
 
 // ScriptsFolder создает скрипты на основе схемы
 func ScriptsFolder() error {
-	return nil
+	n, err := engine.NewDatabaseConnection(Database)
+
+	if err != nil {
+		return err
+	}
+
+	return n.ScriptsFolder(Path, IncludeData, Decrypt)
 }

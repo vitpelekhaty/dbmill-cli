@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/vitpelekhaty/dbmill-cli/commands"
+	"github.com/vitpelekhaty/dbmill-cli/cmd/commands"
 )
 
 func main() {
