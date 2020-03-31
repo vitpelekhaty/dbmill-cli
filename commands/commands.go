@@ -8,8 +8,8 @@ import (
 
 // cmdRoot команда - точка входа в приложение
 var cmdRoot = &cobra.Command{
-	Use:   "dbmill-cli",
-	Short: "",
+	Use:   app,
+	Short: appDescription,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println(cmd.UsageString())
 	},
