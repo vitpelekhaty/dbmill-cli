@@ -1,0 +1,3 @@
+(dbo|tmp)\.Proc1
+dbo\.Proc2
+^dbo\..{1,}Asute.{1,}
