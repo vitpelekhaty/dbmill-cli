@@ -34,6 +34,9 @@ func init() {
 	cmdScriptsFolder.Flags().StringVarP(&FilterPath, "filter-path", "F", "",
 		"path to a file that contains a list of objects for which scripts will be created\nreplaces --filter "+
 			"if it is empty")
+	cmdScriptsFolder.Flags().StringVarP(&ExcludePath, "exclude-path", "E", "",
+		"path to a file that contains a list of objects for which scripts don't need to be created\n"+
+			"replaces --exclude if it is empty")
 	cmdScriptsFolder.Flags().StringVarP(&Username, "username", "U", "",
 		"database username\nreplaces a username listed in a database connection string")
 	cmdScriptsFolder.Flags().StringVarP(&Password, "password", "P", "",
@@ -42,6 +45,8 @@ func init() {
 	cmdScriptsFolder.Flags().StringArrayVarP(&Filter, "filter", "f", nil,
 		"names of objects for which scripts will be created\nregular expressions are permissible\n"+
 			"scripts will be created for all objects if the option is empty\nreplaces --filter-path")
+	cmdScriptsFolder.Flags().StringArrayVarP(&Exclude, "exclude", "e", nil,
+		"names of objects for which scripts do not need to be created\nreplaces --exclude-path")
 
 	cmdScriptsFolder.Flags().BoolVarP(&Decrypt, "decrypt", "", false,
 		"decrypt objects")
