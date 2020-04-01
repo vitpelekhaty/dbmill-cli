@@ -1,16 +1,11 @@
 package engine
 
-type DatabaseOption func(engine IDatabase)
+import (
+	"github.com/vitpelekhaty/dbmill-cli/internal/pkg/log"
+)
 
 // IDatabase интерфейс базы данных
 type IDatabase interface {
-	SetLogger(logger interface{})
+	SetLogger(logger *log.Logger)
 	ScriptsFolder(path string, includeData, decrypt bool) error
-}
-
-// WithLogger устанавливает
-func WithLogger(logger interface{}) DatabaseOption {
-	return func(engine IDatabase) {
-		engine.SetLogger(logger)
-	}
 }
