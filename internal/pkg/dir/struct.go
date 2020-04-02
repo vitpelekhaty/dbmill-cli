@@ -16,6 +16,13 @@ type Item struct {
 	FilenameMask string `yaml:"mask"`
 }
 
+// IStructure интерфес описания структуры каталога скриптов
+type IStructure interface {
+	// ItemInfo возвращает целевой каталог и маску имени файла для указанного типа объекта itemType.
+	// Если информация не найдена, то в параметре ok возвращается false, в противном случае - true
+	ItemInfo(item StructItemType) (subdirectory, mask string, ok bool)
+}
+
 // Structure описание структуры каталога скриптов
 type Structure struct {
 	Items map[StructItemType]Item
@@ -42,6 +49,19 @@ func NewStructure(in io.Reader) (*Structure, error) {
 	}
 
 	return &Structure{Items: si}, nil
+}
+
+// ItemInfo возвращает целевой каталог и маску имени файла для указанного типа объекта itemType.
+// Если информация не найдена, то в параметре ok возвращается false, в противном случае - true
+func (self *Structure) ItemInfo(item StructItemType) (subdirectory, mask string, ok bool) {
+	i, ok := self.Items[item]
+
+	if ok {
+		subdirectory = i.SubDirectory
+		mask = i.FilenameMask
+	}
+
+	return
 }
 
 func parse(data []byte) (map[string]Item, error) {

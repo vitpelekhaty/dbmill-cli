@@ -29,6 +29,14 @@ const (
 	PanicLevel
 )
 
+// ILogger интерфейс логгера
+type ILogger interface {
+	// Print записывает в лог сообщение
+	Print(level Level, args ...interface{})
+	// Printf записывает в лог форматированное сообщение
+	Printf(level Level, format string, args ...interface{})
+}
+
 // Logger логгер
 type Logger struct {
 	output io.Writer

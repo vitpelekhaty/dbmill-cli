@@ -11,6 +11,12 @@ import (
 // ErrorNotMatched ошибка "Значение не соответствует фильтру"
 var ErrorNotMatched = errors.New("not matched")
 
+// IFilter интерфейс фильтра объектов
+type IFilter interface {
+	// Match проверяет соответствие значения value фильтру
+	Match(value string) error
+}
+
 // Filter фильтр объектов базы данных
 type Filter struct {
 	expressions []string
