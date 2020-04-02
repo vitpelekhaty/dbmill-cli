@@ -1,10 +1,14 @@
 package dir
 
+import (
+	"strings"
+)
+
 // Default структура каталога скриптов по умолчанию
 var Default *Structure
 
 func init() {
-	Default, _ = NewStructure([]byte(defaultData))
+	Default, _ = NewStructure(strings.NewReader(defaultData))
 }
 
 const defaultData = `

@@ -2,6 +2,8 @@ package dir
 
 import (
 	"fmt"
+	"io"
+	"io/ioutil"
 
 	"gopkg.in/yaml.v2"
 )
@@ -20,7 +22,13 @@ type Structure struct {
 }
 
 // NewStructure конструктор описания структуры каталога скриптов
-func NewStructure(data []byte) (*Structure, error) {
+func NewStructure(in io.Reader) (*Structure, error) {
+	data, err := ioutil.ReadAll(in)
+
+	if err != nil {
+		return nil, err
+	}
+
 	ss, err := parse(data)
 
 	if err != nil {

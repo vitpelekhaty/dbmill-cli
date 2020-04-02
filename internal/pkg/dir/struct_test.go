@@ -1,6 +1,9 @@
 package dir
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestParse(t *testing.T) {
 	items, err := parse([]byte(defaultData))
@@ -15,7 +18,7 @@ func TestParse(t *testing.T) {
 }
 
 func TestNewStructure(t *testing.T) {
-	s, err := NewStructure([]byte(defaultData))
+	s, err := NewStructure(strings.NewReader(defaultData))
 
 	if err != nil {
 		t.Fatal(err)
