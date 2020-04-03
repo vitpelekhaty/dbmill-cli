@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"errors"
 	"net/url"
 
 	"github.com/vitpelekhaty/dbmill-cli/cmd/engine/sqlserver"
@@ -43,9 +42,6 @@ func WithOutputDirStructure(dirStruct dir.IStructure) DatabaseOption {
 		engine.SetOutputDirectoryStructure(dirStruct)
 	}
 }
-
-// ErrorUnsupportedDatabaseType ошибка "Неподдерживаемая СУБД"
-var ErrorUnsupportedDatabaseType = errors.New("unsupported database type")
 
 // NewDatabaseConnection новое соединение с базой данных
 func NewDatabaseConnection(connection string, options ...DatabaseOption) (IDatabase, error) {
