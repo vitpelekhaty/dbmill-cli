@@ -1,8 +1,6 @@
 package engine
 
 import (
-	"net/url"
-
 	"github.com/vitpelekhaty/dbmill-cli/cmd/engine/sqlserver"
 	"github.com/vitpelekhaty/dbmill-cli/internal/pkg/dir"
 	"github.com/vitpelekhaty/dbmill-cli/internal/pkg/filter"
@@ -59,14 +57,14 @@ func NewDatabaseConnection(connection string, options ...DatabaseOption) (IDatab
 }
 
 func engine(connection string) (IDatabase, error) {
-	u, err := url.Parse(connection)
+	rdbms, err := RDBMS(connection)
 
 	if err != nil {
 		return nil, err
 	}
 
-	switch u.Scheme {
-	case "sqlserver":
+	switch rdbms {
+	case RDBMSSQLServer:
 		return sqlserver.NewEngine(connection)
 	default:
 		return nil, ErrorUnsupportedDatabaseType

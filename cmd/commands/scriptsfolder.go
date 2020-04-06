@@ -39,6 +39,12 @@ var cmdScriptsFolder = &cobra.Command{
 			Password = input.Password()
 		}
 
+		Database, err := engine.SetCredentials(Database, Username, Password)
+
+		if err != nil {
+			return err
+		}
+
 		return scriptsfolder.Run(Database, Path, IncludeData, Decrypt)
 	},
 }
