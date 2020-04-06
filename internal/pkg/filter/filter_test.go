@@ -1,8 +1,6 @@
 package filter
 
 import (
-	"path/filepath"
-	"runtime"
 	"testing"
 )
 
@@ -87,53 +85,5 @@ func TestMatchWithEmptyArray(t *testing.T) {
 
 	if !done {
 		t.Fail()
-	}
-}
-
-func TestFromFile(t *testing.T) {
-	_, testFilename, _, ok := runtime.Caller(0)
-
-	if !ok {
-		t.FailNow()
-	}
-
-	path := filepath.Join(filepath.Dir(testFilename), "testdata/filter")
-
-	_, err := FromFile(path)
-
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestFromFileMatch(t *testing.T) {
-	_, testFilename, _, ok := runtime.Caller(0)
-
-	if !ok {
-		t.FailNow()
-	}
-
-	path := filepath.Join(filepath.Dir(testFilename), "testdata/filter")
-
-	f, err := FromFile(path)
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	for _, test := range testCases {
-		err = f.Match(test.have)
-
-		if err != nil && err != ErrorNotMatched {
-			t.Fatal(err)
-		}
-
-		if test.want && (err == ErrorNotMatched) {
-			t.Errorf("match failed on %s, must %v", test.have, test.want)
-		}
-
-		if !test.want && (err == nil) {
-			t.Errorf("match failed on %s, must %v", test.have, test.want)
-		}
 	}
 }

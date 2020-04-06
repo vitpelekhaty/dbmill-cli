@@ -1,10 +1,8 @@
 package filter
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
-	"os"
 	"regexp"
 )
 
@@ -33,29 +31,6 @@ func New(expressions []string) (*Filter, error) {
 	return &Filter{
 		expressions: expressions,
 	}, nil
-}
-
-// FromFile возвращает новый экземпляр фильтра объектов.
-// Список выражений загружается из указанного файла
-func FromFile(path string) (*Filter, error) {
-	f, err := os.Open(path)
-
-	if err != nil {
-		return nil, err
-	}
-
-	defer f.Close()
-
-	scanner := bufio.NewScanner(f)
-	scanner.Split(bufio.ScanLines)
-
-	var exp []string
-
-	for scanner.Scan() {
-		exp = append(exp, scanner.Text())
-	}
-
-	return New(exp)
 }
 
 // Match проверяет соответствие значения value фильтру
