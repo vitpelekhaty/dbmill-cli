@@ -8,8 +8,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/vitpelekhaty/dbmill-cli/cmd/engine"
+	"github.com/vitpelekhaty/dbmill-cli/cmd/engine/commands"
 	"github.com/vitpelekhaty/dbmill-cli/cmd/input"
-	"github.com/vitpelekhaty/dbmill-cli/cmd/scriptsfolder"
 	"github.com/vitpelekhaty/dbmill-cli/internal/pkg/dir"
 	"github.com/vitpelekhaty/dbmill-cli/internal/pkg/filter"
 	"github.com/vitpelekhaty/dbmill-cli/internal/pkg/log"
@@ -92,25 +92,42 @@ var cmdScriptsFolder = &cobra.Command{
 			return err
 		}
 
-		options := make([]engine.DatabaseOption, 0)
+		engineOptions := make([]engine.Option, 0)
+		commandOptions := make([]commands.ScriptFoldersOption, 0)
+
+		commandOptions = append(commandOptions, commands.WithObjectDefinitionCallback(
+			func(objectCatalog, objectSchema, objectName, objectType string, objectDefinition []byte) error {
+				return SaveDefinition(Path, objectCatalog, objectSchema, objectName, objectType, objectDefinition,
+					outputDirStruct)
+			}))
 
 		if logger != nil {
-			options = append(options, engine.WithLogger(logger))
+			engineOptions = append(engineOptions, engine.WithLogger(logger))
 		}
 
 		if include != nil {
-			options = append(options, engine.WithIncludedObjects(include))
+			commandOptions = append(commandOptions, commands.WithIncludedObjects(include))
 		}
 
 		if exclude != nil {
-			options = append(options, engine.WithExcludedObjects(exclude))
+			commandOptions = append(commandOptions, commands.WithExcludedObjects(exclude))
 		}
 
-		if outputDirStruct != nil {
-			options = append(options, engine.WithOutputDirStructure(outputDirStruct))
+		if Decrypt {
+			commandOptions = append(commandOptions, commands.WithDecrypt())
 		}
 
-		return scriptsfolder.Run(Database, Path, IncludeData, Decrypt, options...)
+		if IncludeData {
+			commandOptions = append(commandOptions, commands.WithStaticData())
+		}
+
+		engn, err := engine.New(Database, engineOptions...)
+
+		if err != nil {
+			return err
+		}
+
+		return engn.ScriptsFolder(commandOptions...).Run()
 	},
 }
 
@@ -155,4 +172,10 @@ func ObjectFilter(path string, expressions []string) (filter.IFilter, error) {
 	}
 
 	return filter.New(exp)
+}
+
+// SaveDefinition сохраняет определение объекта БД в скрипт
+func SaveDefinition(path string, objectCatalog, objectSchema, objectName, objectType string, objectDefinition []byte,
+	rules dir.IStructure) error {
+	return nil
 }
