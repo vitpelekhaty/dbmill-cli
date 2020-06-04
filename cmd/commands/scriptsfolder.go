@@ -96,7 +96,8 @@ var cmdScriptsFolder = &cobra.Command{
 		commandOptions := make([]commands.ScriptsFolderOption, 0)
 
 		commandOptions = append(commandOptions, commands.WithObjectDefinitionCallback(
-			func(objectCatalog, objectSchema, objectName, objectType string, objectDefinition []byte) error {
+			func(objectCatalog, objectSchema, objectName string, objectType output.DatabaseObjectType,
+				objectDefinition []byte) error {
 				return SaveDefinition(Path, objectCatalog, objectSchema, objectName, objectType, objectDefinition,
 					outputDirStruct)
 			}))
@@ -175,7 +176,7 @@ func ObjectFilter(path string, expressions []string) (filter.IFilter, error) {
 }
 
 // SaveDefinition сохраняет определение объекта БД в скрипт
-func SaveDefinition(path string, objectCatalog, objectSchema, objectName, objectType string, objectDefinition []byte,
-	rules output.IScriptsFolderOutput) error {
+func SaveDefinition(path string, objectCatalog, objectSchema, objectName string, objectType output.DatabaseObjectType,
+	objectDefinition []byte, rules output.IScriptsFolderOutput) error {
 	return nil
 }

@@ -2,6 +2,7 @@ package commands
 
 import (
 	"github.com/vitpelekhaty/dbmill-cli/internal/pkg/filter"
+	"github.com/vitpelekhaty/dbmill-cli/internal/pkg/output"
 )
 
 // ScriptsFolderOption тип параметра выполнения команды ScriptsFolder
@@ -24,7 +25,7 @@ func WithExcludedObjects(filter filter.IFilter) ScriptsFolderOption {
 }
 
 // ObjectDefinitionCallback тип callback-функции, вызываемой при чтении определения объекта БД
-type ObjectDefinitionCallback func(objectCatalog, objectSchema, objectName, objectType string,
+type ObjectDefinitionCallback func(objectCatalog, objectSchema, objectName string, objectType output.DatabaseObjectType,
 	objectDefinition []byte) error
 
 // WithObjectDefinitionCallback устанавливает callback для чтения определений объектов БД
