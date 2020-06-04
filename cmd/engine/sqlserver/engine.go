@@ -8,15 +8,15 @@ import (
 	_ "github.com/denisenkom/go-mssqldb"
 
 	"github.com/vitpelekhaty/dbmill-cli/cmd/engine/commands"
-	"github.com/vitpelekhaty/dbmill-cli/internal/pkg/dir"
 	"github.com/vitpelekhaty/dbmill-cli/internal/pkg/log"
+	"github.com/vitpelekhaty/dbmill-cli/internal/pkg/output"
 )
 
 // Engine реализация функциональности утилиты dbmill-cli для MS SQL Server
 type Engine struct {
 	db     *sql.DB
 	logger log.ILogger
-	output dir.IStructure
+	output output.IScriptsFolderOutput
 }
 
 const timeout = time.Second * 30
@@ -38,7 +38,7 @@ func NewEngine(connection string) (*Engine, error) {
 	return &Engine{
 		db:     db,
 		logger: nil,
-		output: dir.Default,
+		output: output.DefaultScriptsFolderOutput,
 	}, nil
 }
 
@@ -48,9 +48,9 @@ func (self *Engine) SetLogger(logger log.ILogger) {
 }
 
 // SetOutputDirectoryStructure устанавливает описание структуры каталога, где будут созданы скрипты
-func (self *Engine) SetOutputDirectoryStructure(dirStruct dir.IStructure) {
+func (self *Engine) SetOutputDirectoryStructure(dirStruct output.IScriptsFolderOutput) {
 	if dirStruct == nil {
-		self.output = dir.Default
+		self.output = output.DefaultScriptsFolderOutput
 	} else {
 		self.output = dirStruct
 	}

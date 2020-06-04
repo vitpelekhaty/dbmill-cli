@@ -10,7 +10,7 @@ func init() {
 		"path to the directory where scripts will be created")
 	cmdScriptsFolder.Flags().StringVarP(&Database, "db", "D", "",
 		"database to create scripts")
-	cmdScriptsFolder.Flags().StringVarP(&DirStructFilename, "dir-struct", "S", "",
+	cmdScriptsFolder.Flags().StringVarP(&DirStructFilename, "output-struct", "S", "",
 		"path to a file that describes a directory structure where the scripts will be created")
 	cmdScriptsFolder.Flags().StringVarP(&LogFilename, "log", "l", "",
 		"path to a log file")

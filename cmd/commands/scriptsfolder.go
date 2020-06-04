@@ -10,9 +10,9 @@ import (
 	"github.com/vitpelekhaty/dbmill-cli/cmd/engine"
 	"github.com/vitpelekhaty/dbmill-cli/cmd/engine/commands"
 	"github.com/vitpelekhaty/dbmill-cli/cmd/input"
-	"github.com/vitpelekhaty/dbmill-cli/internal/pkg/dir"
 	"github.com/vitpelekhaty/dbmill-cli/internal/pkg/filter"
 	"github.com/vitpelekhaty/dbmill-cli/internal/pkg/log"
+	"github.com/vitpelekhaty/dbmill-cli/internal/pkg/output"
 )
 
 // cmdScriptsFolder команда создания скриптов на основе схемы
@@ -132,9 +132,9 @@ var cmdScriptsFolder = &cobra.Command{
 }
 
 // OutputDirectoryStructure возвращает описание структуры директории, в которой будут создаваться скрипты объектов БД
-func OutputDirectoryStructure(path string) (dir.IStructure, error) {
+func OutputDirectoryStructure(path string) (output.IScriptsFolderOutput, error) {
 	if strings.Trim(path, " ") == "" {
-		return dir.Default, nil
+		return output.DefaultScriptsFolderOutput, nil
 	}
 
 	f, err := os.Open(path)
@@ -145,7 +145,7 @@ func OutputDirectoryStructure(path string) (dir.IStructure, error) {
 
 	defer f.Close()
 
-	return dir.NewStructure(f)
+	return output.NewScriptsFolderOutput(f)
 }
 
 // ObjectFilter возвращает настроенный фильтр объектов БД
@@ -176,6 +176,6 @@ func ObjectFilter(path string, expressions []string) (filter.IFilter, error) {
 
 // SaveDefinition сохраняет определение объекта БД в скрипт
 func SaveDefinition(path string, objectCatalog, objectSchema, objectName, objectType string, objectDefinition []byte,
-	rules dir.IStructure) error {
+	rules output.IScriptsFolderOutput) error {
 	return nil
 }
