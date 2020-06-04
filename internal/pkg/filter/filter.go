@@ -34,13 +34,13 @@ func New(expressions []string) (*Filter, error) {
 }
 
 // Match проверяет соответствие значения value фильтру
-func (self *Filter) Match(value string) error {
-	if len(self.expressions) == 0 {
+func (filter *Filter) Match(value string) error {
+	if len(filter.expressions) == 0 {
 		return nil
 	}
 
-	for _, exp := range self.expressions {
-		if err := self.match(exp, value); err == nil {
+	for _, exp := range filter.expressions {
+		if err := filter.match(exp, value); err == nil {
 			return nil
 		} else {
 			if err != ErrorNotMatched {
@@ -52,7 +52,7 @@ func (self *Filter) Match(value string) error {
 	return ErrorNotMatched
 }
 
-func (self *Filter) match(pattern, value string) error {
+func (filter *Filter) match(pattern, value string) error {
 	re, err := regexp.Compile(pattern)
 
 	if err != nil {

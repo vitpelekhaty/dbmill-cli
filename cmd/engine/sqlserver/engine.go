@@ -43,38 +43,38 @@ func NewEngine(connection string) (*Engine, error) {
 }
 
 // SetLogger устанавливает логгер событий
-func (self *Engine) SetLogger(logger log.ILogger) {
-	self.logger = logger
+func (engine *Engine) SetLogger(logger log.ILogger) {
+	engine.logger = logger
 }
 
 // SetOutputDirectoryStructure устанавливает описание структуры каталога, где будут созданы скрипты
-func (self *Engine) SetOutputDirectoryStructure(dirStruct output.IScriptsFolderOutput) {
+func (engine *Engine) SetOutputDirectoryStructure(dirStruct output.IScriptsFolderOutput) {
 	if dirStruct == nil {
-		self.output = output.DefaultScriptsFolderOutput
+		engine.output = output.DefaultScriptsFolderOutput
 	} else {
-		self.output = dirStruct
+		engine.output = dirStruct
 	}
 }
 
 // ScriptsFolder создает скрипты объектов БД по указанному пути path
-func (self *Engine) ScriptsFolder(options ...commands.ScriptsFolderOption) commands.IScriptsFolderCommand {
-	return NewScriptsFolderCommand(self, options...)
+func (engine *Engine) ScriptsFolder(options ...commands.ScriptsFolderOption) commands.IScriptsFolderCommand {
+	return NewScriptsFolderCommand(engine, options...)
 }
 
 // Log создает запись в логе, если указан логгер
-func (self *Engine) Log(level log.Level, args ...interface{}) {
-	if self.logger == nil {
+func (engine *Engine) Log(level log.Level, args ...interface{}) {
+	if engine.logger == nil {
 		return
 	}
 
-	self.logger.Print(level, args...)
+	engine.logger.Print(level, args...)
 }
 
 // Logf создает фомрматированную запись в логе, если указан логгер
-func (self *Engine) Logf(level log.Level, format string, args ...interface{}) {
-	if self.logger == nil {
+func (engine *Engine) Logf(level log.Level, format string, args ...interface{}) {
+	if engine.logger == nil {
 		return
 	}
 
-	self.logger.Printf(level, format, args...)
+	engine.logger.Printf(level, format, args...)
 }

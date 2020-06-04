@@ -22,11 +22,13 @@ const (
 	Trigger
 	// Domain пользовательский тип данных
 	Domain
+	// Schema
+	Schema
 )
 
 // String возвращает строковое представление значения типа DatabaseObjectType
-func (self DatabaseObjectType) String() string {
-	return databaseObjectTypeMapping[self]
+func (objType DatabaseObjectType) String() string {
+	return databaseObjectTypeMapping[objType]
 }
 
 var databaseObjectTypeMapping = map[DatabaseObjectType]string{
@@ -39,6 +41,7 @@ var databaseObjectTypeMapping = map[DatabaseObjectType]string{
 	Function:      "function",
 	Trigger:       "trigger",
 	Domain:        "domain",
+	Schema:        "schema",
 }
 
 var databaseObjectTypeMappingReverse = map[string]DatabaseObjectType{
@@ -51,4 +54,5 @@ var databaseObjectTypeMappingReverse = map[string]DatabaseObjectType{
 	"function":   Function,
 	"trigger":    Trigger,
 	"domain":     Domain,
+	"schema":     Schema,
 }

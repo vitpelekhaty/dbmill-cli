@@ -99,50 +99,50 @@ func WithOutput(output io.Writer) Option {
 }
 
 // Print записывает в лог сообщение
-func (self *Logger) Print(level Level, args ...interface{}) {
-	if self.output == nil {
+func (logger *Logger) Print(level Level, args ...interface{}) {
+	if logger.output == nil {
 		return
 	}
 
 	switch level {
 	case TraceLevel:
-		self.logger.Trace(args...)
+		logger.logger.Trace(args...)
 	case DebugLevel:
-		self.logger.Debug(args...)
+		logger.logger.Debug(args...)
 	case InfoLevel:
-		self.logger.Info(args...)
+		logger.logger.Info(args...)
 	case WarningLevel:
-		self.logger.Warn(args...)
+		logger.logger.Warn(args...)
 	case ErrorLevel:
-		self.logger.Error(args...)
+		logger.logger.Error(args...)
 	case FatalLevel:
-		self.logger.Fatal(args...)
+		logger.logger.Fatal(args...)
 	case PanicLevel:
-		self.logger.Panic(args...)
+		logger.logger.Panic(args...)
 	}
 }
 
 // Printf записывает в лог форматированное сообщение
-func (self *Logger) Printf(level Level, format string, args ...interface{}) {
-	if self.output == nil {
+func (logger *Logger) Printf(level Level, format string, args ...interface{}) {
+	if logger.output == nil {
 		return
 	}
 
 	switch level {
 	case TraceLevel:
-		self.logger.Tracef(format, args...)
+		logger.logger.Tracef(format, args...)
 	case DebugLevel:
-		self.logger.Debugf(format, args...)
+		logger.logger.Debugf(format, args...)
 	case InfoLevel:
-		self.logger.Infof(format, args...)
+		logger.logger.Infof(format, args...)
 	case WarningLevel:
-		self.logger.Warnf(format, args...)
+		logger.logger.Warnf(format, args...)
 	case ErrorLevel:
-		self.logger.Errorf(format, args...)
+		logger.logger.Errorf(format, args...)
 	case FatalLevel:
-		self.logger.Fatalf(format, args...)
+		logger.logger.Fatalf(format, args...)
 	case PanicLevel:
-		self.logger.Panicf(format, args...)
+		logger.logger.Panicf(format, args...)
 	}
 }
 

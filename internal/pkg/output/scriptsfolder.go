@@ -56,8 +56,8 @@ func NewScriptsFolderOutput(in io.Reader) (*ScriptsFolderOutput, error) {
 
 // Rules возвращает целевой каталог и маску имени файла для указанного типа объекта itemType.
 // Если информация не найдена, то в параметре ok возвращается false, в противном случае - true
-func (self *ScriptsFolderOutput) Rules(item DatabaseObjectType) (subdirectory, mask string, ok bool) {
-	i, ok := self.rules[item]
+func (output *ScriptsFolderOutput) Rules(item DatabaseObjectType) (subdirectory, mask string, ok bool) {
+	i, ok := output.rules[item]
 
 	if ok {
 		subdirectory = i.SubDirectory
@@ -129,4 +129,8 @@ trigger:
 domain:
   subdirectory: Programmability/User Types/Data Types
   mask: $schema$.$object$.sql
+
+schema:
+  subdirectory: Security/Schemas
+  mask: $object$.sql
 `

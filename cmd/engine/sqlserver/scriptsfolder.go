@@ -3,9 +3,14 @@ package sqlserver
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"strings"
+
+	"github.com/reactivex/rxgo/v2"
 
 	"github.com/vitpelekhaty/dbmill-cli/cmd/engine/commands"
 	"github.com/vitpelekhaty/dbmill-cli/internal/pkg/filter"
+	"github.com/vitpelekhaty/dbmill-cli/internal/pkg/output"
 )
 
 // ScriptsFolderCommand реализация интерфейса IScriptsFolderCommand для SQL Server
@@ -21,7 +26,12 @@ type ScriptsFolderCommand struct {
 // NewScriptsFolderCommand конструктор ScriptsFolderCommand
 func NewScriptsFolderCommand(engine *Engine, options ...commands.ScriptsFolderOption) *ScriptsFolderCommand {
 	command := &ScriptsFolderCommand{
-		engine: engine,
+		engine:             engine,
+		include:            nil,
+		exclude:            nil,
+		decrypt:            false,
+		includeStaticData:  false,
+		definitionCallback: nil,
 	}
 
 	for _, option := range options {
@@ -31,66 +41,135 @@ func NewScriptsFolderCommand(engine *Engine, options ...commands.ScriptsFolderOp
 	return command
 }
 
-func (self *ScriptsFolderCommand) Run() error {
-	_, err := self.databaseObjects()
+// Run запускает выполнение команды
+func (command *ScriptsFolderCommand) Run() error {
+	objects, err := command.databaseObjects()
 
 	if err != nil {
 		return err
 	}
 
+	in := command.enumObjects(objects)
+
+	observable := rxgo.FromChannel(in)
+
+	observable.
+		Filter(func(item interface{}) bool {
+			object := item.(databaseObject)
+			return command.Included(object.SchemaAndName()) == nil
+		}).
+		Filter(func(item interface{}) bool {
+			object := item.(databaseObject)
+			return command.Excluded(object.SchemaAndName()) == filter.ErrorNotMatched
+		}).
+		Map(func(ctx context.Context, item interface{}) (interface{}, error) {
+			object := item.(databaseObject)
+
+			if !object.DefinitionExists() {
+				err := command.writeDefinition(object)
+
+				if err != nil {
+					return object, err
+				}
+			}
+
+			return object, nil
+		})
+
+	for item := range observable.Observe() {
+		if item.Error() {
+			return item.E
+		}
+
+		object := item.V.(databaseObject)
+
+		err = command.callObjectDefinitionCallback(object)
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (command *ScriptsFolderCommand) enumObjects(databaseObjects []interface{}) chan rxgo.Item {
+	out := make(chan rxgo.Item)
+
+	go func() {
+		defer close(out)
+
+		for _, object := range databaseObjects {
+			out <- rxgo.Of(object)
+		}
+	}()
+
+	return out
+}
+
+func (command *ScriptsFolderCommand) callObjectDefinitionCallback(object databaseObject) error {
+	if command.definitionCallback == nil {
+		return nil
+	}
+
+	return command.definitionCallback(object.Catalog(), object.Schema(), object.Name(), object.Type(),
+		object.Definition())
+}
+
+func (command *ScriptsFolderCommand) writeDefinition(object interface{}) error {
 	return nil
 }
 
 // SetIncludedObjects устанавливает фильтр, позволяющий выбирать только те объекты БД, которые должны быть
 // обработаны
-func (self *ScriptsFolderCommand) SetIncludedObjects(filter filter.IFilter) {
-	self.include = filter
+func (command *ScriptsFolderCommand) SetIncludedObjects(filter filter.IFilter) {
+	command.include = filter
 }
 
 // SetExcludedObjects устанавливает фильтр, позволяющий игнорировать объекты БД, которые должны быть заторонуты
 // обработкой
-func (self *ScriptsFolderCommand) SetExcludedObjects(filter filter.IFilter) {
-	self.exclude = filter
+func (command *ScriptsFolderCommand) SetExcludedObjects(filter filter.IFilter) {
+	command.exclude = filter
 }
 
 // SetObjectDefinitionCallback устанавливает callback для чтения определений объектов БД
-func (self *ScriptsFolderCommand) SetObjectDefinitionCallback(callback commands.ObjectDefinitionCallback) {
-	self.definitionCallback = callback
+func (command *ScriptsFolderCommand) SetObjectDefinitionCallback(callback commands.ObjectDefinitionCallback) {
+	command.definitionCallback = callback
 }
 
 // StaticData опция выгрузки скриптов вставки данных
-func (self *ScriptsFolderCommand) StaticData(on bool) {
-	self.includeStaticData = on
+func (command *ScriptsFolderCommand) StaticData(on bool) {
+	command.includeStaticData = on
 }
 
 // Decrypt по возможности расшифровывать определения объектов БД
-func (self *ScriptsFolderCommand) Decrypt(on bool) {
-	self.decrypt = on
+func (command *ScriptsFolderCommand) Decrypt(on bool) {
+	command.decrypt = on
 }
 
 // Included проверяет, должен ли объект object быть включен в обработку
-func (self *ScriptsFolderCommand) Included(object string) error {
-	if self.include == nil {
+func (command *ScriptsFolderCommand) Included(object string) error {
+	if command.include == nil {
 		return nil
 	}
 
-	return self.include.Match(object)
+	return command.include.Match(object)
 }
 
 // Excluded проверяет, должен ли объект object быть исключен из обработки
-func (self *ScriptsFolderCommand) Excluded(object string) error {
-	if self.exclude == nil {
+func (command *ScriptsFolderCommand) Excluded(object string) error {
+	if command.exclude == nil {
 		return filter.ErrorNotMatched
 	}
 
-	return self.exclude.Match(object)
+	return command.exclude.Match(object)
 }
 
-func (self *ScriptsFolderCommand) databaseObjects() ([]interface{}, error) {
+func (command *ScriptsFolderCommand) databaseObjects() ([]interface{}, error) {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), timeout)
 	defer cancelFunc()
 
-	stmt, err := self.engine.db.PrepareContext(ctx, selectObjects)
+	stmt, err := command.engine.db.PrepareContext(ctx, selectObjects)
 
 	if err != nil {
 		return nil, err
@@ -151,6 +230,109 @@ type databaseObject struct {
 	definition sql.NullString
 	// owner владелец объекта БД
 	owner sql.NullString
+}
+
+// Catalog наименование базы данных
+func (object databaseObject) Catalog() string {
+	if object.catalog.Valid {
+		return object.catalog.String
+	}
+
+	return ""
+}
+
+// Schema схема базы данных
+func (object databaseObject) Schema() string {
+	if object.schema.Valid {
+		return object.schema.String
+	}
+
+	return ""
+}
+
+// Name наименование объекта БД
+func (object databaseObject) Name() string {
+	if object.name.Valid {
+		return object.name.String
+	}
+
+	return ""
+}
+
+// Definition определение объекта БД
+func (object databaseObject) Definition() []byte {
+	if object.definition.Valid {
+		return []byte(object.definition.String)
+	}
+
+	return nil
+}
+
+// SetDefinition записывает новое определение объекта БД
+func (object *databaseObject) SetDefinition(data []byte) {
+	object.definition = sql.NullString{
+		String: string(data),
+		Valid:  true,
+	}
+}
+
+// DefinitionExists проверяет наличие определения у объекта БД
+func (object *databaseObject) DefinitionExists() bool {
+	if !object.definition.Valid {
+		return false
+	}
+
+	return len(object.definition.String) > 0
+}
+
+// Type тип объекта БД
+func (object databaseObject) Type() output.DatabaseObjectType {
+	if !object.objectType.Valid {
+		return output.UnknownObject
+	}
+
+	objectType := object.objectType.String
+
+	switch objectType {
+	case "DATABASE":
+		return output.Database
+	case "SCHEMA":
+		return output.Schema
+	case "DOMAIN":
+		return output.Domain
+	case "BASE TABLE":
+		return output.Table
+	case "VIEW":
+		return output.View
+	case "TRIGGER":
+		return output.Trigger
+	case "FUNCTION":
+		return output.Function
+	case "PROCEDURE":
+		return output.Procedure
+	default:
+		return output.UnknownObject
+	}
+}
+
+// SchemaAndName наименование объекта в формате %schema%.%name%
+func (object databaseObject) SchemaAndName() string {
+	schema := object.Schema()
+	name := object.Name()
+
+	if strings.Trim(schema, " ") != "" {
+		if strings.Trim(name, " ") != "" {
+			return fmt.Sprintf("%s.%s", schema, name)
+		}
+
+		return schema
+	} else {
+		if strings.Trim(name, " ") != "" {
+			return name
+		}
+	}
+
+	return ""
 }
 
 const selectObjects = `
