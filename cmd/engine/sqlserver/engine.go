@@ -57,7 +57,7 @@ func (self *Engine) SetOutputDirectoryStructure(dirStruct dir.IStructure) {
 }
 
 // ScriptsFolder создает скрипты объектов БД по указанному пути path
-func (self *Engine) ScriptsFolder(options ...commands.ScriptFoldersOption) commands.IScriptsFolderCommand {
+func (self *Engine) ScriptsFolder(options ...commands.ScriptsFolderOption) commands.IScriptsFolderCommand {
 	return NewScriptsFolderCommand(self, options...)
 }
 

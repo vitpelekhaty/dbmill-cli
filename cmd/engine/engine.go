@@ -11,7 +11,7 @@ type IEngine interface {
 	// SetLogger устанавливает логгер событий
 	SetLogger(logger log.ILogger)
 	// ScriptsFolder создает скрипты объектов БД по указанному пути path
-	ScriptsFolder(options ...commands.ScriptFoldersOption) commands.IScriptsFolderCommand
+	ScriptsFolder(options ...commands.ScriptsFolderOption) commands.IScriptsFolderCommand
 }
 
 // Option опция "движка" базы данных

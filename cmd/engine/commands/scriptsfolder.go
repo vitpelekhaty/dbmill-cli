@@ -4,12 +4,12 @@ import (
 	"github.com/vitpelekhaty/dbmill-cli/internal/pkg/filter"
 )
 
-// ScriptFoldersOption тип параметра выполнения команды ScriptsFolder
-type ScriptFoldersOption func(command IScriptsFolderCommand)
+// ScriptsFolderOption тип параметра выполнения команды ScriptsFolder
+type ScriptsFolderOption func(command IScriptsFolderCommand)
 
 // WithIncludedObjects указывает "движку" при выполнении команды использовать фильтр filter, чтобы ограничить список
 // объектов БД указанным пользователем
-func WithIncludedObjects(filter filter.IFilter) ScriptFoldersOption {
+func WithIncludedObjects(filter filter.IFilter) ScriptsFolderOption {
 	return func(command IScriptsFolderCommand) {
 		command.SetIncludedObjects(filter)
 	}
@@ -17,7 +17,7 @@ func WithIncludedObjects(filter filter.IFilter) ScriptFoldersOption {
 
 // WithExcludedObjects указывает "движку" при выполнении команды использовать фильтр filter, чтобы исключить из
 // обработки указанные пользователем объекты БД
-func WithExcludedObjects(filter filter.IFilter) ScriptFoldersOption {
+func WithExcludedObjects(filter filter.IFilter) ScriptsFolderOption {
 	return func(command IScriptsFolderCommand) {
 		command.SetExcludedObjects(filter)
 	}
@@ -28,21 +28,21 @@ type ObjectDefinitionCallback func(objectCatalog, objectSchema, objectName, obje
 	objectDefinition []byte) error
 
 // WithObjectDefinitionCallback устанавливает callback для чтения определений объектов БД
-func WithObjectDefinitionCallback(fn ObjectDefinitionCallback) ScriptFoldersOption {
+func WithObjectDefinitionCallback(fn ObjectDefinitionCallback) ScriptsFolderOption {
 	return func(command IScriptsFolderCommand) {
 		command.SetObjectDefinitionCallback(fn)
 	}
 }
 
 // WithStaticData опция выгрузки скриптов вставки данных в таблицы
-func WithStaticData() ScriptFoldersOption {
+func WithStaticData() ScriptsFolderOption {
 	return func(command IScriptsFolderCommand) {
 		command.StaticData(true)
 	}
 }
 
 // WithDecrypt по возможности расшифровывать определения объектов БД
-func WithDecrypt() ScriptFoldersOption {
+func WithDecrypt() ScriptsFolderOption {
 	return func(command IScriptsFolderCommand) {
 		command.Decrypt(true)
 	}

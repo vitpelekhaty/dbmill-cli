@@ -19,7 +19,7 @@ type ScriptsFolderCommand struct {
 }
 
 // NewScriptsFolderCommand конструктор ScriptsFolderCommand
-func NewScriptsFolderCommand(engine *Engine, options ...commands.ScriptFoldersOption) *ScriptsFolderCommand {
+func NewScriptsFolderCommand(engine *Engine, options ...commands.ScriptsFolderOption) *ScriptsFolderCommand {
 	command := &ScriptsFolderCommand{
 		engine: engine,
 	}

@@ -93,7 +93,7 @@ var cmdScriptsFolder = &cobra.Command{
 		}
 
 		engineOptions := make([]engine.Option, 0)
-		commandOptions := make([]commands.ScriptFoldersOption, 0)
+		commandOptions := make([]commands.ScriptsFolderOption, 0)
 
 		commandOptions = append(commandOptions, commands.WithObjectDefinitionCallback(
 			func(objectCatalog, objectSchema, objectName, objectType string, objectDefinition []byte) error {
