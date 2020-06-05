@@ -2,7 +2,10 @@ package commands
 
 import (
 	"bufio"
+	"fmt"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -102,6 +105,8 @@ var cmdScriptsFolder = &cobra.Command{
 					outputDirStruct)
 			}))
 
+		commandOptions = append(commandOptions, commands.WithDatabaseObjectTypes(outputDirStruct.DatabaseObjects()))
+
 		if logger != nil {
 			engineOptions = append(engineOptions, engine.WithLogger(logger))
 		}
@@ -178,5 +183,22 @@ func ObjectFilter(path string, expressions []string) (filter.IFilter, error) {
 // SaveDefinition сохраняет определение объекта БД в скрипт
 func SaveDefinition(path string, objectCatalog, objectSchema, objectName string, objectType output.DatabaseObjectType,
 	objectDefinition []byte, rules output.IScriptsFolderOutput) error {
-	return nil
+	subdirectory, filename, ok := rules.Rules(objectType)
+
+	if !ok {
+		return fmt.Errorf("no ouput rules for %v", objectType)
+	}
+
+	filename = strings.ReplaceAll(filename, "$schema$", objectSchema)
+	filename = strings.ReplaceAll(filename, "$object$", objectName)
+	filename = strings.ReplaceAll(filename, "$database$", objectCatalog)
+	filename = strings.ReplaceAll(filename, "$type$", objectType.String())
+
+	err := os.MkdirAll(filepath.Join(path, subdirectory), os.ModeDir)
+
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(filepath.Join(filepath.Join(path, subdirectory), filename), objectDefinition, os.ModePerm)
 }
