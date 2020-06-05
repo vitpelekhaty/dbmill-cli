@@ -160,6 +160,10 @@ func ObjectFilter(path string, expressions []string) (filter.IFilter, error) {
 		return filter.New(expressions)
 	}
 
+	if strings.Trim(path, " ") == "" {
+		return nil, nil
+	}
+
 	f, err := os.Open(path)
 
 	if err != nil {
@@ -194,11 +198,11 @@ func SaveDefinition(path string, objectCatalog, objectSchema, objectName string,
 	filename = strings.ReplaceAll(filename, "$database$", objectCatalog)
 	filename = strings.ReplaceAll(filename, "$type$", objectType.String())
 
-	err := os.MkdirAll(filepath.Join(path, subdirectory), os.ModeDir)
+	err := os.MkdirAll(filepath.Join(path, subdirectory), os.ModePerm)
 
 	if err != nil {
 		return err
 	}
 
-	return ioutil.WriteFile(filepath.Join(filepath.Join(path, subdirectory), filename), objectDefinition, os.ModePerm)
+	return ioutil.WriteFile(filepath.Join(filepath.Join(path, subdirectory), filename), objectDefinition, 0664)
 }

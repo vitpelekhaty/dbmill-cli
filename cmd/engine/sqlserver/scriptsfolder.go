@@ -222,7 +222,7 @@ func (command *ScriptsFolderCommand) databaseObjects() ([]interface{}, error) {
 			return nil, err
 		}
 
-		object := &databaseObject{
+		object := databaseObject{
 			catalog:    catalog,
 			schema:     schema,
 			name:       name,
