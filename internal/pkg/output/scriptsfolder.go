@@ -21,6 +21,8 @@ type IScriptsFolderOutput interface {
 	// Rules возвращает целевой каталог и маску имени файла для указанного типа объекта itemType.
 	// Если информация не найдена, то в параметре ok возвращается false, в противном случае - true
 	Rules(objectType DatabaseObjectType) (subdirectory, mask string, ok bool)
+	// DatabaseObjects возвращает список указанных в конфигурации вывода объектов базы данных
+	DatabaseObjects() []DatabaseObjectType
 }
 
 // ScriptsFolderOutput описание структуры каталога скриптов
@@ -52,6 +54,20 @@ func NewScriptsFolderOutput(in io.Reader) (*ScriptsFolderOutput, error) {
 	}
 
 	return &ScriptsFolderOutput{rules: si}, nil
+}
+
+// DatabaseObjects возвращает список указанных в конфигурации вывода объектов базы данных
+func (output *ScriptsFolderOutput) DatabaseObjects() []DatabaseObjectType {
+	objects := make([]DatabaseObjectType, len(output.rules))
+
+	var index int
+
+	for key := range output.rules {
+		objects[index] = key
+		index++
+	}
+
+	return objects
 }
 
 // Rules возвращает целевой каталог и маску имени файла для указанного типа объекта itemType.

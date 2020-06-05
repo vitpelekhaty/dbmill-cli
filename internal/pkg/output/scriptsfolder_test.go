@@ -28,3 +28,17 @@ func TestNewScriptsFolderOutput(t *testing.T) {
 		t.FailNow()
 	}
 }
+
+func TestScriptsFolderOutput_DatabaseObjects(t *testing.T) {
+	s, err := NewScriptsFolderOutput(strings.NewReader(defaultScriptsFolderOutput))
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	objects := s.DatabaseObjects()
+
+	if len(s.rules) != len(objects) {
+		t.FailNow()
+	}
+}
