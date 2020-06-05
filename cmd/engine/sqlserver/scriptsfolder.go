@@ -10,6 +10,7 @@ import (
 
 	"github.com/vitpelekhaty/dbmill-cli/cmd/engine/commands"
 	"github.com/vitpelekhaty/dbmill-cli/internal/pkg/filter"
+	"github.com/vitpelekhaty/dbmill-cli/internal/pkg/log"
 	"github.com/vitpelekhaty/dbmill-cli/internal/pkg/output"
 )
 
@@ -55,7 +56,7 @@ func (command *ScriptsFolderCommand) Run() error {
 
 	observable := rxgo.FromChannel(in)
 
-	observable.
+	<-observable.
 		Filter(func(item interface{}) bool {
 			object := item.(databaseObject)
 			return command.ObjectTypeIncluded(object.Type())
@@ -69,25 +70,25 @@ func (command *ScriptsFolderCommand) Run() error {
 			return command.Excluded(object.SchemaAndName()) == filter.ErrorNotMatched
 		}).
 		Map(func(ctx context.Context, item interface{}) (interface{}, error) {
+			obj := item.(databaseObject)
+			return command.writeDefinition(ctx, obj)
+		}).
+		ForEach(func(item interface{}) {
 			object := item.(databaseObject)
-			err := command.writeDefinition(object)
+			command.engine.Log(log.DebugLevel, object.SchemaAndName())
 
-			return object, err
+			err := command.callObjectDefinitionCallback(object)
+
+			if err != nil {
+				command.engine.Log(log.ErrorLevel, err)
+			}
+		}, func(err error) {
+			if err != nil {
+				command.engine.Log(log.ErrorLevel, err)
+			}
+		}, func() {
+			command.engine.Log(log.InfoLevel, "done")
 		})
-
-	for item := range observable.Observe() {
-		if item.Error() {
-			return item.E
-		}
-
-		object := item.V.(databaseObject)
-
-		err = command.callObjectDefinitionCallback(object)
-
-		if err != nil {
-			return err
-		}
-	}
 
 	return nil
 }
@@ -115,8 +116,15 @@ func (command *ScriptsFolderCommand) callObjectDefinitionCallback(object databas
 		object.Definition())
 }
 
-func (command *ScriptsFolderCommand) writeDefinition(object interface{}) error {
-	return nil
+func (command *ScriptsFolderCommand) writeDefinition(ctx context.Context, object interface{}) (interface{}, error) {
+	obj := object.(databaseObject)
+
+	switch obj.Type() {
+	case output.Schema:
+		return command.writeSchemaDefinition(ctx, obj)
+	}
+
+	return object, nil
 }
 
 // SetIncludedObjects устанавливает фильтр, позволяющий выбирать только те объекты БД, которые должны быть
@@ -351,6 +359,15 @@ func (object databaseObject) SchemaAndName() string {
 		if strings.Trim(name, " ") != "" {
 			return name
 		}
+	}
+
+	return ""
+}
+
+// Owner владелец объекта БД
+func (object databaseObject) Owner() string {
+	if object.owner.Valid {
+		return object.owner.String
 	}
 
 	return ""
