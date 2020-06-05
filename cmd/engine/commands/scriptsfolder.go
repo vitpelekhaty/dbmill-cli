@@ -49,6 +49,13 @@ func WithDecrypt() ScriptsFolderOption {
 	}
 }
 
+// WithDatabaseObjectTypes указывает, какие объекты БД выгружать в скрипты
+func WithDatabaseObjectTypes(types []output.DatabaseObjectType) ScriptsFolderOption {
+	return func(command IScriptsFolderCommand) {
+		command.SetDatabaseObjectTypes(types)
+	}
+}
+
 // IScriptsFolderCommand интерфейс команды ScriptsFolder
 type IScriptsFolderCommand interface {
 	IEngineCommand
@@ -65,4 +72,6 @@ type IScriptsFolderCommand interface {
 	StaticData(on bool)
 	// Decrypt по возможности расшифровывать определения объектов БД
 	Decrypt(on bool)
+	// SetDatabaseObjectTypes устанавливает список типов объектов БД, которые необходимо выгрузить в скрипты
+	SetDatabaseObjectTypes(types []output.DatabaseObjectType)
 }

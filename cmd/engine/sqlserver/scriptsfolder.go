@@ -20,6 +20,7 @@ type ScriptsFolderCommand struct {
 	exclude            filter.IFilter
 	decrypt            bool
 	includeStaticData  bool
+	types              map[output.DatabaseObjectType]bool
 	definitionCallback commands.ObjectDefinitionCallback
 }
 
@@ -31,6 +32,7 @@ func NewScriptsFolderCommand(engine *Engine, options ...commands.ScriptsFolderOp
 		exclude:            nil,
 		decrypt:            false,
 		includeStaticData:  false,
+		types:              nil,
 		definitionCallback: nil,
 	}
 
@@ -56,6 +58,10 @@ func (command *ScriptsFolderCommand) Run() error {
 	observable.
 		Filter(func(item interface{}) bool {
 			object := item.(databaseObject)
+			return command.ObjectTypeIncluded(object.Type())
+		}).
+		Filter(func(item interface{}) bool {
+			object := item.(databaseObject)
 			return command.Included(object.SchemaAndName()) == nil
 		}).
 		Filter(func(item interface{}) bool {
@@ -64,16 +70,9 @@ func (command *ScriptsFolderCommand) Run() error {
 		}).
 		Map(func(ctx context.Context, item interface{}) (interface{}, error) {
 			object := item.(databaseObject)
+			err := command.writeDefinition(object)
 
-			if !object.DefinitionExists() {
-				err := command.writeDefinition(object)
-
-				if err != nil {
-					return object, err
-				}
-			}
-
-			return object, nil
+			return object, err
 		})
 
 	for item := range observable.Observe() {
@@ -147,6 +146,17 @@ func (command *ScriptsFolderCommand) Decrypt(on bool) {
 	command.decrypt = on
 }
 
+// SetDatabaseObjectTypes устанавливает список типов объектов БД, которые необходимо выгрузить в скрипты
+func (command *ScriptsFolderCommand) SetDatabaseObjectTypes(types []output.DatabaseObjectType) {
+	t := make(map[output.DatabaseObjectType]bool)
+
+	for _, objectType := range types {
+		t[objectType] = true
+	}
+
+	command.types = t
+}
+
 // Included проверяет, должен ли объект object быть включен в обработку
 func (command *ScriptsFolderCommand) Included(object string) error {
 	if command.include == nil {
@@ -163,6 +173,17 @@ func (command *ScriptsFolderCommand) Excluded(object string) error {
 	}
 
 	return command.exclude.Match(object)
+}
+
+// ObjectTypeIncluded проверяет, должен ли тип объекта БД включен в обработку
+func (command *ScriptsFolderCommand) ObjectTypeIncluded(object output.DatabaseObjectType) bool {
+	if len(command.types) == 0 {
+		return false
+	}
+
+	_, ok := command.types[object]
+
+	return ok
 }
 
 func (command *ScriptsFolderCommand) databaseObjects() ([]interface{}, error) {
@@ -384,17 +405,6 @@ from (
            [owner] = null
     from INFORMATION_SCHEMA.VIEWS as views
         inner join sys.objects as objects on (views.TABLE_NAME = objects.name)
-    union
-    select
-           [order] = 5,
-           [catalog] = db_name(),
-           [schema] = schema_name(objects.schema_id),
-           [name] = objects.name,
-           [type] = N'TRIGGER',
-           [definition] = object_definition(objects.object_id),
-           [owner] = null
-    from sys.objects as objects
-    where objects.type = 'TA'
     union
     select
            [order] = 5,
