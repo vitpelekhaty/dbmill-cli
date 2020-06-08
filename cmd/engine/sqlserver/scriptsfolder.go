@@ -3,8 +3,6 @@ package sqlserver
 import (
 	"context"
 	"database/sql"
-	"fmt"
-	"strings"
 
 	"github.com/reactivex/rxgo/v2"
 
@@ -23,6 +21,8 @@ type ScriptsFolderCommand struct {
 	includeStaticData  bool
 	types              map[output.DatabaseObjectType]bool
 	definitionCallback commands.ObjectDefinitionCallback
+
+	permissions ObjectPermissions
 }
 
 // NewScriptsFolderCommand конструктор ScriptsFolderCommand
@@ -35,6 +35,7 @@ func NewScriptsFolderCommand(engine *Engine, options ...commands.ScriptsFolderOp
 		includeStaticData:  false,
 		types:              nil,
 		definitionCallback: nil,
+		permissions:        nil,
 	}
 
 	for _, option := range options {
@@ -51,6 +52,14 @@ func (command *ScriptsFolderCommand) Run() error {
 	if err != nil {
 		return err
 	}
+
+	permissions, err := command.Permissions()
+
+	if err != nil {
+		return err
+	}
+
+	command.permissions = permissions
 
 	in := command.enumObjects(objects)
 
@@ -349,19 +358,7 @@ func (object databaseObject) SchemaAndName() string {
 	schema := object.Schema()
 	name := object.Name()
 
-	if strings.Trim(schema, " ") != "" {
-		if strings.Trim(name, " ") != "" {
-			return fmt.Sprintf("%s.%s", schema, name)
-		}
-
-		return schema
-	} else {
-		if strings.Trim(name, " ") != "" {
-			return name
-		}
-	}
-
-	return ""
+	return SchemaAndObject(schema, name)
 }
 
 // Owner владелец объекта БД
