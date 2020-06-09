@@ -72,11 +72,11 @@ func (command *ScriptsFolderCommand) Run() error {
 		}).
 		Filter(func(item interface{}) bool {
 			object := item.(IDatabaseObject)
-			return command.Included(object.SchemaAndName()) == nil
+			return command.Included(object.SchemaAndName(true)) == nil
 		}).
 		Filter(func(item interface{}) bool {
 			object := item.(IDatabaseObject)
-			return command.Excluded(object.SchemaAndName()) == filter.ErrorNotMatched
+			return command.Excluded(object.SchemaAndName(true)) == filter.ErrorNotMatched
 		}).
 		Map(func(ctx context.Context, item interface{}) (interface{}, error) {
 			obj := item.(IDatabaseObject)
@@ -84,7 +84,7 @@ func (command *ScriptsFolderCommand) Run() error {
 		}).
 		ForEach(func(item interface{}) {
 			object := item.(IDatabaseObject)
-			command.engine.Log(log.DebugLevel, object.SchemaAndName())
+			command.engine.Log(log.DebugLevel, object.SchemaAndName(true))
 
 			err := command.callObjectDefinitionCallback(object)
 

@@ -86,7 +86,7 @@ type ObjectPermissions map[string]UserPerms
 
 // Append добавляет информацию о разрешении
 func (perms ObjectPermissions) Append(schema, object, permission, state, user string) error {
-	obj := SchemaAndObject(schema, object)
+	obj := SchemaAndObject(schema, object, true)
 
 	permState := NewPermissionState(state)
 
@@ -131,6 +131,19 @@ func (perms ObjectPermissions) append(objectName, permission string, state Permi
 	}
 
 	return nil
+}
+
+// Users возвращает список пользователей, обладающих правами на указанный объект
+func (perms UserPerms) Users() []string {
+	users := make([]string, len(perms))
+	var index int
+
+	for user := range perms {
+		users[index] = user
+		index++
+	}
+
+	return users
 }
 
 // Permissions возвращает разрешения на объекты БД

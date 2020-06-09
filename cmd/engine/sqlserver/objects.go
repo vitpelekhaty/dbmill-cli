@@ -23,7 +23,7 @@ type IDatabaseObject interface {
 	// Type возвращает тип объекта БД
 	Type() output.DatabaseObjectType
 	// SchemaAndName возвращает наименование объекта в формате %schema%.%name%
-	SchemaAndName() string
+	SchemaAndName(useBrackets bool) string
 	// Owner возвращает владельца объекта БД
 	Owner() string
 }
@@ -142,11 +142,11 @@ func (object databaseObject) Type() output.DatabaseObjectType {
 }
 
 // SchemaAndName наименование объекта в формате %schema%.%name%
-func (object databaseObject) SchemaAndName() string {
+func (object databaseObject) SchemaAndName(useBrackets bool) string {
 	schema := object.Schema()
 	name := object.Name()
 
-	return SchemaAndObject(schema, name)
+	return SchemaAndObject(schema, name, useBrackets)
 }
 
 // Owner владелец объекта БД
@@ -165,6 +165,7 @@ type module struct {
 	usesQuotedIdentifier sql.NullBool
 }
 
+// ANSINulls объект создан с SET ANSI_NULLS ON
 func (mod module) ANSINulls() bool {
 	if mod.usesANSINulls.Valid {
 		return mod.usesANSINulls.Bool
@@ -173,10 +174,12 @@ func (mod module) ANSINulls() bool {
 	return false
 }
 
+// ANSINullsValid сведения о ANSI_NULLS не равны NULL
 func (mod module) ANSINullsValid() bool {
 	return mod.usesANSINulls.Valid
 }
 
+// QuotedIdentifier объект создан с SET QUOTED_IDENTIFIER ON
 func (mod module) QuotedIdentifier() bool {
 	if mod.usesQuotedIdentifier.Valid {
 		return mod.usesQuotedIdentifier.Bool
@@ -185,6 +188,7 @@ func (mod module) QuotedIdentifier() bool {
 	return false
 }
 
+// QuotedIdentifierValid сведения о QUOTED_IDENTIFIER не равны NULL
 func (mod module) QuotedIdentifierValid() bool {
 	return mod.usesQuotedIdentifier.Valid
 }
