@@ -133,6 +133,8 @@ func (command *ScriptsFolderCommand) writeDefinition(ctx context.Context, object
 		return command.writeSchemaDefinition(ctx, obj)
 	case output.Procedure:
 		return command.writeProcedureDefinition(ctx, obj)
+	case output.Function:
+		return command.writeFunctionDefinition(ctx, obj)
 	}
 
 	return object, nil

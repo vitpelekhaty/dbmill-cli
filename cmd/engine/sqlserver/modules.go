@@ -22,7 +22,26 @@ func (command *ScriptsFolderCommand) writeProcedureDefinition(ctx context.Contex
 		return object, fmt.Errorf("object %s is not a procedure", obj.SchemaAndName(true))
 	}
 
-	definition := string(obj.Definition())
+	return command.writeModuleDefinition(ctx, obj)
+}
+
+func (command *ScriptsFolderCommand) writeFunctionDefinition(ctx context.Context, object interface{}) (interface{},
+	error) {
+	obj, ok := object.(ISQLModule)
+
+	if !ok {
+		return object, errors.New("object is not a SQL module")
+	}
+
+	if obj.Type() != output.Function {
+		return object, fmt.Errorf("object %s is not a function", obj.SchemaAndName(true))
+	}
+
+	return command.writeModuleDefinition(ctx, obj)
+}
+
+func (command *ScriptsFolderCommand) writeModuleDefinition(ctx context.Context, object ISQLModule) (ISQLModule, error) {
+	definition := string(object.Definition())
 
 	if strings.Trim(definition, " ") == "" {
 		return object, nil
@@ -32,14 +51,14 @@ func (command *ScriptsFolderCommand) writeProcedureDefinition(ctx context.Contex
 
 	mod := make([]string, 0)
 
-	if obj.QuotedIdentifierValid() {
-		if obj.QuotedIdentifier() {
+	if object.QuotedIdentifierValid() {
+		if object.QuotedIdentifier() {
 			mod = append(mod, "QUOTED_IDENTIFIER")
 		}
 	}
 
-	if obj.ANSINullsValid() {
-		if obj.ANSINulls() {
+	if object.ANSINullsValid() {
+		if object.ANSINulls() {
 			mod = append(mod, "ANSI_NULLS")
 		}
 	}
@@ -50,7 +69,7 @@ func (command *ScriptsFolderCommand) writeProcedureDefinition(ctx context.Contex
 		definition = fmt.Sprintf("SET %s ON\nGO\n\n%s", s, definition)
 	}
 
-	name := obj.SchemaAndName(true)
+	name := object.SchemaAndName(true)
 	permissions := command.permissions[name]
 
 	if len(permissions) > 0 {
@@ -71,7 +90,7 @@ func (command *ScriptsFolderCommand) writeProcedureDefinition(ctx context.Contex
 		}
 	}
 
-	obj.SetDefinition([]byte(definition))
+	object.SetDefinition([]byte(definition))
 
-	return obj, nil
+	return object, nil
 }
