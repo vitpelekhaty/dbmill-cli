@@ -2,6 +2,7 @@ package sqlserver
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -11,10 +12,14 @@ import (
 
 func (command *ScriptsFolderCommand) writeSchemaDefinition(ctx context.Context, object interface{}) (interface{},
 	error) {
-	obj := object.(databaseObject)
+	obj, ok := object.(IDatabaseObject)
+
+	if !ok {
+		return object, errors.New("object is not a database object")
+	}
 
 	if obj.Type() != output.Schema {
-		return object, fmt.Errorf("object %s is not a schema", obj.SchemaAndName())
+		return object, fmt.Errorf("object %s is not a schema", obj.Name())
 	}
 
 	owner := obj.Owner()
