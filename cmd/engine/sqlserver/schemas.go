@@ -19,7 +19,7 @@ func (command *ScriptsFolderCommand) writeSchemaDefinition(ctx context.Context, 
 	}
 
 	if obj.Type() != output.Schema {
-		return object, fmt.Errorf("object %s is not a schema", obj.Name())
+		return object, fmt.Errorf("object %s is not a schema", obj.SchemaAndName(true))
 	}
 
 	owner := obj.Owner()
@@ -32,7 +32,7 @@ func (command *ScriptsFolderCommand) writeSchemaDefinition(ctx context.Context, 
 		definition = fmt.Sprintf(schemaShortDefinition, obj.Schema())
 	}
 
-	objectName := obj.Name()
+	objectName := obj.SchemaAndName(true)
 	permissions := command.permissions[objectName]
 
 	var stringPermissions string
@@ -44,7 +44,7 @@ func (command *ScriptsFolderCommand) writeSchemaDefinition(ctx context.Context, 
 				sort.Strings(perms)
 
 				stringPermissions = strings.Join(perms, ",\n  ")
-				stringPermissions = fmt.Sprintf("%s\n  %s\nON SCHEMA :: [%s] TO [%s]\nGO", state.String(),
+				stringPermissions = fmt.Sprintf("%s\n  %s\nON SCHEMA :: %s TO [%s]\nGO", state.String(),
 					stringPermissions, objectName, user)
 
 				definition = fmt.Sprintf("%s\n\n%s", definition, stringPermissions)

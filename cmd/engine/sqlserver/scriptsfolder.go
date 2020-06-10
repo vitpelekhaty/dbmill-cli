@@ -135,6 +135,8 @@ func (command *ScriptsFolderCommand) writeDefinition(ctx context.Context, object
 		return command.writeProcedureDefinition(ctx, obj)
 	case output.Function:
 		return command.writeFunctionDefinition(ctx, obj)
+	case output.View:
+		return command.writeViewDefinition(ctx, obj)
 	}
 
 	return object, nil
@@ -295,7 +297,7 @@ from (
         [order] = 1,
         [catalog] = schemas.CATALOG_NAME,
         [schema] = schemas.SCHEMA_NAME,
-        [name] = schemas.SCHEMA_NAME,
+        [name] = null,
         [type] = N'SCHEMA',
         [definition] = null,
         [owner] = isnull(users.name, schemas.SCHEMA_OWNER),

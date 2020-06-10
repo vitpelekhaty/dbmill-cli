@@ -148,5 +148,5 @@ domain:
 
 schema:
   subdirectory: Security/Schemas
-  mask: $object$.sql
+  mask: $schema$.sql
 `

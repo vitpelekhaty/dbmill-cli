@@ -40,6 +40,21 @@ func (command *ScriptsFolderCommand) writeFunctionDefinition(ctx context.Context
 	return command.writeModuleDefinition(ctx, obj)
 }
 
+func (command *ScriptsFolderCommand) writeViewDefinition(ctx context.Context, object interface{}) (interface{},
+	error) {
+	obj, ok := object.(ISQLModule)
+
+	if !ok {
+		return object, errors.New("object is not a SQL module")
+	}
+
+	if obj.Type() != output.View {
+		return object, fmt.Errorf("object %s is not a function", obj.SchemaAndName(true))
+	}
+
+	return command.writeModuleDefinition(ctx, obj)
+}
+
 func (command *ScriptsFolderCommand) writeModuleDefinition(ctx context.Context, object ISQLModule) (ISQLModule, error) {
 	definition := string(object.Definition())
 
