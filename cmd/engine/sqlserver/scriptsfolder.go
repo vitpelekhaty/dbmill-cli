@@ -61,9 +61,7 @@ func (command *ScriptsFolderCommand) Run() error {
 
 	command.permissions = permissions
 
-	in := command.enumObjects(objects)
-
-	observable := rxgo.FromChannel(in)
+	observable := rxgo.FromChannel(objects)
 
 	<-observable.
 		Filter(func(item interface{}) bool {
@@ -100,20 +98,6 @@ func (command *ScriptsFolderCommand) Run() error {
 		})
 
 	return nil
-}
-
-func (command *ScriptsFolderCommand) enumObjects(databaseObjects []interface{}) chan rxgo.Item {
-	out := make(chan rxgo.Item)
-
-	go func() {
-		defer close(out)
-
-		for _, object := range databaseObjects {
-			out <- rxgo.Of(object)
-		}
-	}()
-
-	return out
 }
 
 func (command *ScriptsFolderCommand) callObjectDefinitionCallback(object IDatabaseObject) error {
@@ -211,9 +195,8 @@ func (command *ScriptsFolderCommand) ObjectTypeIncluded(object output.DatabaseOb
 	return ok
 }
 
-func (command *ScriptsFolderCommand) databaseObjects() ([]interface{}, error) {
-	ctx, cancelFunc := context.WithTimeout(context.Background(), timeout)
-	defer cancelFunc()
+func (command *ScriptsFolderCommand) databaseObjects() (chan rxgo.Item, error) {
+	ctx := context.Background()
 
 	stmt, err := command.engine.db.PrepareContext(ctx, selectObjects)
 
@@ -229,66 +212,69 @@ func (command *ScriptsFolderCommand) databaseObjects() ([]interface{}, error) {
 		return nil, err
 	}
 
-	objects := make([]interface{}, 0)
+	out := make(chan rxgo.Item)
 
-	var (
-		catalog              sql.NullString
-		schema               sql.NullString
-		name                 sql.NullString
-		objectType           sql.NullString
-		definition           sql.NullString
-		owner                sql.NullString
-		usesANSINulls        sql.NullBool
-		usesQuotedIdentifier sql.NullBool
-	)
+	go func() {
+		defer close(out)
+		defer stmt.Close()
 
-	var objType string
+		var (
+			catalog              sql.NullString
+			schema               sql.NullString
+			name                 sql.NullString
+			objectType           sql.NullString
+			definition           sql.NullString
+			owner                sql.NullString
+			usesANSINulls        sql.NullBool
+			usesQuotedIdentifier sql.NullBool
+		)
 
-	for rows.Next() {
-		err = rows.Scan(&catalog, &schema, &name, &objectType, &definition, &owner, &usesANSINulls,
-			&usesQuotedIdentifier)
+		var objType string
 
-		if err != nil {
-			return nil, err
-		}
+		for rows.Next() {
+			err = rows.Scan(&catalog, &schema, &name, &objectType, &definition, &owner, &usesANSINulls,
+				&usesQuotedIdentifier)
 
-		if objectType.Valid {
-			objType = objectType.String
-		}
+			if err == nil {
+				if objectType.Valid {
+					objType = objectType.String
+				}
 
-		var object interface{}
+				var object interface{}
 
-		switch objType {
-		case "FUNCTION", "PROCEDURE", "TRIGGER", "VIEW":
-			object = &module{
-				databaseObject: databaseObject{
-					catalog:    catalog,
-					schema:     schema,
-					name:       name,
-					objectType: objectType,
-					definition: definition,
-					owner:      owner,
-				},
-				usesANSINulls:        usesANSINulls,
-				usesQuotedIdentifier: usesQuotedIdentifier,
+				switch objType {
+				case "FUNCTION", "PROCEDURE", "TRIGGER", "VIEW":
+					object = &module{
+						databaseObject: databaseObject{
+							catalog:    catalog,
+							schema:     schema,
+							name:       name,
+							objectType: objectType,
+							definition: definition,
+							owner:      owner,
+						},
+						usesANSINulls:        usesANSINulls,
+						usesQuotedIdentifier: usesQuotedIdentifier,
+					}
+				default:
+					object = &databaseObject{
+						catalog:    catalog,
+						schema:     schema,
+						name:       name,
+						objectType: objectType,
+						definition: definition,
+						owner:      owner,
+					}
+				}
+
+				out <- rxgo.Of(object)
+			} else {
+				out <- rxgo.Error(err)
 			}
-		default:
-			object = &databaseObject{
-				catalog:    catalog,
-				schema:     schema,
-				name:       name,
-				objectType: objectType,
-				definition: definition,
-				owner:      owner,
-			}
 		}
+	}()
 
-		if object != nil {
-			objects = append(objects, object)
-		}
-	}
-
-	return objects, nil
+	return out, nil
 }
 
 const selectObjects = `
