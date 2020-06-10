@@ -49,7 +49,22 @@ func (command *ScriptsFolderCommand) writeViewDefinition(ctx context.Context, ob
 	}
 
 	if obj.Type() != output.View {
-		return object, fmt.Errorf("object %s is not a function", obj.SchemaAndName(true))
+		return object, fmt.Errorf("object %s is not a view", obj.SchemaAndName(true))
+	}
+
+	return command.writeModuleDefinition(ctx, obj)
+}
+
+func (command *ScriptsFolderCommand) writeTriggerDefinition(ctx context.Context, object interface{}) (interface{},
+	error) {
+	obj, ok := object.(ISQLModule)
+
+	if !ok {
+		return object, errors.New("object is not a SQL module")
+	}
+
+	if obj.Type() != output.Trigger {
+		return object, fmt.Errorf("object %s is not a DDL trigger", obj.SchemaAndName(true))
 	}
 
 	return command.writeModuleDefinition(ctx, obj)
@@ -81,7 +96,7 @@ func (command *ScriptsFolderCommand) writeModuleDefinition(ctx context.Context, 
 	s := strings.Join(mod, ", ")
 
 	if strings.Trim(s, " ") != "" && strings.Trim(definition, " ") != "" {
-		definition = fmt.Sprintf("SET %s ON\nGO\n\n%s", s, definition)
+		definition = fmt.Sprintf("SET %s ON\nGO\n%s", s, definition)
 	}
 
 	name := object.SchemaAndName(true)

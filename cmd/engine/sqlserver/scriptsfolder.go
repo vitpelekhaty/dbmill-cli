@@ -137,6 +137,8 @@ func (command *ScriptsFolderCommand) writeDefinition(ctx context.Context, object
 		return command.writeFunctionDefinition(ctx, obj)
 	case output.View:
 		return command.writeViewDefinition(ctx, obj)
+	case output.Trigger:
+		return command.writeTriggerDefinition(ctx, obj)
 	}
 
 	return object, nil
