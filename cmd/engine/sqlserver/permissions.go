@@ -165,6 +165,8 @@ func (command *ScriptsFolderCommand) Permissions() (ObjectPermissions, error) {
 		return nil, err
 	}
 
+	defer rows.Close()
+
 	var (
 		nullableSchema sql.NullString
 		schema         string

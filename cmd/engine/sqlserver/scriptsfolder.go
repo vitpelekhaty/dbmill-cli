@@ -21,6 +21,7 @@ type ScriptsFolderCommand struct {
 	includeStaticData  bool
 	types              map[output.DatabaseObjectType]bool
 	definitionCallback commands.ObjectDefinitionCallback
+	userDefinedTypes   userDefinedTypes
 
 	permissions ObjectPermissions
 }
@@ -36,6 +37,7 @@ func NewScriptsFolderCommand(engine *Engine, options ...commands.ScriptsFolderOp
 		types:              nil,
 		definitionCallback: nil,
 		permissions:        nil,
+		userDefinedTypes:   nil,
 	}
 
 	for _, option := range options {
@@ -47,12 +49,6 @@ func NewScriptsFolderCommand(engine *Engine, options ...commands.ScriptsFolderOp
 
 // Run запускает выполнение команды
 func (command *ScriptsFolderCommand) Run() error {
-	objects, err := command.databaseObjects()
-
-	if err != nil {
-		return err
-	}
-
 	permissions, err := command.Permissions()
 
 	if err != nil {
@@ -60,6 +56,20 @@ func (command *ScriptsFolderCommand) Run() error {
 	}
 
 	command.permissions = permissions
+
+	userTypes, err := command.userTypes()
+
+	if err != nil {
+		return err
+	}
+
+	command.userDefinedTypes = userTypes
+
+	objects, err := command.databaseObjects()
+
+	if err != nil {
+		return err
+	}
 
 	observable := rxgo.FromChannel(objects)
 
@@ -216,6 +226,7 @@ func (command *ScriptsFolderCommand) databaseObjects() (chan rxgo.Item, error) {
 
 	go func() {
 		defer close(out)
+		defer rows.Close()
 		defer stmt.Close()
 
 		var (
