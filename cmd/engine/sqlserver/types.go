@@ -3,6 +3,10 @@ package sqlserver
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
+
+	"github.com/vitpelekhaty/dbmill-cli/internal/pkg/output"
 )
 
 type userDefinedType struct {
@@ -88,6 +92,55 @@ func (types userDefinedTypes) append(udt *userDefinedType) {
 	}
 
 	types[udt.SchemaAndName(true)] = udt
+}
+
+func (command *ScriptsFolderCommand) writeDomainDefinition(ctx context.Context, object interface{}) (interface{},
+	error) {
+	obj, ok := object.(IDatabaseObject)
+
+	if !ok {
+		return object, errors.New("object is not a database object")
+	}
+
+	name := obj.SchemaAndName(true)
+
+	if obj.Type() != output.UserDefinedDataType && obj.Type() != output.UserDefinedTableType {
+		return object, fmt.Errorf("object %s is not a domain", name)
+	}
+
+	domain, ok := command.userDefinedTypes[name]
+
+	if !ok {
+		return object, fmt.Errorf("no info about domain %s", name)
+	}
+
+	if obj.Type() == output.UserDefinedDataType {
+		if !domain.isTableType {
+			return command.writeDataTypeDefinition(ctx, obj, domain)
+		} else {
+			return obj, fmt.Errorf("%s is not data type", name)
+		}
+	}
+
+	if obj.Type() == output.UserDefinedTableType {
+		if domain.isTableType {
+			return command.writeTableTypeDefinition(ctx, obj, domain)
+		} else {
+			return obj, fmt.Errorf("%s is not table type", name)
+		}
+	}
+
+	return obj, nil
+}
+
+func (command *ScriptsFolderCommand) writeDataTypeDefinition(ctx context.Context, object IDatabaseObject,
+	domain *userDefinedType) (IDatabaseObject, error) {
+	return object, nil
+}
+
+func (command *ScriptsFolderCommand) writeTableTypeDefinition(ctx context.Context, object IDatabaseObject,
+	domain *userDefinedType) (IDatabaseObject, error) {
+	return object, nil
 }
 
 func (command *ScriptsFolderCommand) userTypes() (userDefinedTypes, error) {
