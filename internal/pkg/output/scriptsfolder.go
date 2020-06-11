@@ -142,8 +142,12 @@ trigger:
   subdirectory: Programmability/Database/Triggers
   mask: $schema$.$object$.sql
 
-domain:
+dataType:
   subdirectory: Programmability/User Types/Data Types
+  mask: $schema$.$object$.sql
+
+tableType:
+  subdirectory: Programmability/User Types/Table Types
   mask: $schema$.$object$.sql
 
 schema:

@@ -124,8 +124,10 @@ func (object databaseObject) Type() output.DatabaseObjectType {
 		return output.Database
 	case "SCHEMA":
 		return output.Schema
-	case "DOMAIN":
-		return output.Domain
+	case "DATA TYPE":
+		return output.UserDefinedDataType
+	case "TABLE TYPE":
+		return output.UserDefinedTableType
 	case "BASE TABLE":
 		return output.Table
 	case "VIEW":

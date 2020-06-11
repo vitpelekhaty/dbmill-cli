@@ -184,7 +184,7 @@ from (
         [collation_name] = types.collation_name,
         [is_nullable] = types.is_nullable,
         [is_table_type] = types.is_table_type,
-        [is_memory_optimized] = null
+        [is_memory_optimized] = cast(0 as bit)
     from sys.types as types
         inner join sys.types as st on (types.system_type_id = st.system_type_id)
             and st.system_type_id = st.user_type_id

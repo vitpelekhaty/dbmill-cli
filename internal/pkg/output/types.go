@@ -20,8 +20,10 @@ const (
 	Function
 	// Trigger табличная функция
 	Trigger
-	// Domain пользовательский тип данных
-	Domain
+	// UserDefinedDataType пользовательский тип данных
+	UserDefinedDataType
+	// UserDefinedTableType пользовательский тип таблицы
+	UserDefinedTableType
 	// Schema
 	Schema
 )
@@ -32,16 +34,17 @@ func (objType DatabaseObjectType) String() string {
 }
 
 var databaseObjectTypeMapping = map[DatabaseObjectType]string{
-	UnknownObject: "unknown",
-	Database:      "database",
-	Table:         "table",
-	StaticData:    "staticData",
-	View:          "view",
-	Procedure:     "procedure",
-	Function:      "function",
-	Trigger:       "trigger",
-	Domain:        "domain",
-	Schema:        "schema",
+	UnknownObject:        "unknown",
+	Database:             "database",
+	Table:                "table",
+	StaticData:           "staticData",
+	View:                 "view",
+	Procedure:            "procedure",
+	Function:             "function",
+	Trigger:              "trigger",
+	UserDefinedDataType:  "dataType",
+	UserDefinedTableType: "tableType",
+	Schema:               "schema",
 }
 
 var databaseObjectTypeMappingReverse = map[string]DatabaseObjectType{
@@ -53,6 +56,7 @@ var databaseObjectTypeMappingReverse = map[string]DatabaseObjectType{
 	"procedure":  Procedure,
 	"function":   Function,
 	"trigger":    Trigger,
-	"domain":     Domain,
+	"dataType":   UserDefinedDataType,
+	"tableType":  UserDefinedTableType,
 	"schema":     Schema,
 }

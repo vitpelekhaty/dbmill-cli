@@ -308,16 +308,29 @@ from (
     union
     select
         [order] = 2,
-        [catalog] = domains.DOMAIN_CATALOG,
-        [schema] = isnull(schema_name(types.schema_id), domains.DOMAIN_SCHEMA),
-        [name] = domains.DOMAIN_NAME,
-        [type] = N'DOMAIN',
+        [catalog] = db_name(),
+        [schema] = schema_name(types.schema_id),
+        [name] = types.name,
+        [type] = N'DATA TYPE',
         [definition] = null,
         [owner] = null,
         [uses_ansi_nulls] = null,
         [uses_quoted_identifier] = null
-    from INFORMATION_SCHEMA.DOMAINS as domains
-        inner join sys.types as types on (domains.DOMAIN_NAME = types.name)
+    from sys.types as types
+    where (types.is_user_defined != cast(0 as bit)) and (types.is_table_type = cast(0 as bit))
+    union
+    select
+        [order] = 2,
+        [catalog] = db_name(),
+        [schema] = schema_name(types.schema_id),
+        [name] = types.name,
+        [type] = N'TABLE TYPE',
+        [definition] = null,
+        [owner] = null,
+        [uses_ansi_nulls] = null,
+        [uses_quoted_identifier] = null
+    from sys.types as types
+    where (types.is_user_defined != cast(0 as bit)) and (types.is_table_type != cast(0 as bit))
     union
     select
         [order] = 3,
