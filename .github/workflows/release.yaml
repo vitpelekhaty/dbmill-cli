@@ -1,0 +1,32 @@
+name: release-dbmill-cli
+
+on:
+  create:
+    tags:
+      - v*
+
+jobs:
+  release:
+    name: release dbmill-cli
+    runs_on: ubuntu-latest
+    steps:
+    - name: Extract branch
+      id: extract_branch
+      shell: bash
+      run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+    - name: Install Golang
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.14
+    - name: Checkout Code
+      uses: actions/checkout@v2
+    - name: Unshallow
+      run: git fetch --prune --unshallow
+    - name: Run Goreleaser
+      uses: goreleaser/goreleaser-action@v2
+      with:
+        version: latest
+        args: release --rm-dist
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        PROJECT_BRANCH: ${{ steps.extract_branch.outputs.branch }}
