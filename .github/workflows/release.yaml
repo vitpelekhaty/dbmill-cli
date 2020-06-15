@@ -8,7 +8,7 @@ on:
 jobs:
   release:
     name: release dbmill-cli
-    runs_on: ubuntu-latest
+    runs-on: ubuntu-latest
     steps:
     - name: Extract branch
       id: extract_branch
