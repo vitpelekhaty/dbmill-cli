@@ -135,6 +135,26 @@ func (command *ScriptsFolderCommand) writeDomainDefinition(ctx context.Context, 
 
 func (command *ScriptsFolderCommand) writeDataTypeDefinition(ctx context.Context, object IDatabaseObject,
 	domain *userDefinedType) (IDatabaseObject, error) {
+	const dataTypeDefinition = "CREATE TYPE %s FROM %s\nGO"
+
+	userTypeName := domain.SchemaAndName(true)
+	t := "[" + domain.parentTypeName + "]"
+
+	if domain.HasMaxLength() {
+		t = fmt.Sprintf("%s(%s)", t, domain.MaxLength())
+	} else {
+		if domain.HasPrecision() {
+			t = fmt.Sprintf("%s(%d, %d)", t, domain.Precision(), domain.Scale())
+		}
+	}
+
+	if !domain.isNullable {
+		t = t + " NOT NULL"
+	}
+
+	definition := fmt.Sprintf(dataTypeDefinition, userTypeName, t)
+	object.SetDefinition([]byte(definition))
+
 	return object, nil
 }
 
