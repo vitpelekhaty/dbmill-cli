@@ -36,7 +36,7 @@ func readPassword(caption string) string {
 
 	fmt.Print(caption)
 
-	if pwd, err := terminal.ReadPassword(syscall.Stdin); err == nil {
+	if pwd, err := terminal.ReadPassword(int(syscall.Stdin)); err == nil {
 		return string(pwd)
 	}
 
