@@ -22,7 +22,7 @@ jobs:
     - name: Test
       run: |
         go test ./internal/pkg/output
-        go test ./interl/pkg/filter
+        go test ./internal/pkg/filter
         go test ./cmd/commands
         go test ./cmd/engine
         go test ./cmd/engine/sqlserver
