@@ -9,11 +9,11 @@ GOTEST=${GO} test
 TIMEOUT=-timeout 30s
 
 COMMIT=$(shell git rev-parse --short=8 HEAD)
-BRANCH=$(shell git rev-parse --abbrev-ref HEAD)
+VERSION=$(shell git rev-parse --abbrev-ref HEAD)
 TAG=${COMMIT}
 
 BUILT=$(shell date -u '+%Y-%m-%d %H:%M:%S UTC')
-LDFLAGS=-ldflags "-s -X 'github.com/vitpelekhaty/dbmill-cli/cmd/commands.GitBranch=${BRANCH}' -X 'github.com/vitpelekhaty/dbmill-cli/cmd/commands.GitCommit=${COMMIT}' -X 'github.com/vitpelekhaty/dbmill-cli/cmd/commands.Built=${BUILT}'"
+LDFLAGS=-ldflags "-s -X 'github.com/vitpelekhaty/dbmill-cli/cmd/commands.Version=${VERSION}' -X 'github.com/vitpelekhaty/dbmill-cli/cmd/commands.GitCommit=${COMMIT}' -X 'github.com/vitpelekhaty/dbmill-cli/cmd/commands.Built=${BUILT}'"
 BUILD_DIR=./bin
 
 ifeq (${OS}, Windows_NT)

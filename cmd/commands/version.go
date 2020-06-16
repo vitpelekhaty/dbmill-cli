@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	// GitBranch ветка репозитория исходного кода, из которого собрано приложение
-	GitBranch string
+	// Version ветка репозитория исходного кода, из которого собрано приложение
+	Version string
 	// GitCommit идентификатор фиксации исходного кода, из которого собрано приложение
 	GitCommit string
 	// Время сборки приложения
@@ -25,8 +25,8 @@ var cmdVersion = &cobra.Command{
 		fmt.Printf("%s\n%s\n%s\n\n", mill, app, appDescription)
 
 		tw := tabwriter.NewWriter(os.Stdout, 0, 20, 0, '\t', 0)
-		fmt.Fprintf(tw, "GOARCH\t%s\t\nGOOS\t%s\t\nBranch\t%s\t\nCommit\t%s\t\nBuilt\t%s\t\n",
-			runtime.GOARCH, runtime.GOOS, GitBranch, GitCommit, Built)
+		fmt.Fprintf(tw, "GOARCH\t%s\t\nGOOS\t%s\t\nVersion\t%s\t\nCommit\t%s\t\nBuilt\t%s\t\n",
+			runtime.GOARCH, runtime.GOOS, Version, GitCommit, Built)
 		tw.Flush()
 	},
 }

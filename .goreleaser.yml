@@ -22,7 +22,7 @@ builds:
     env:
       - CGO_ENABLED=1
     ldflags:
-      - -s -X 'github.com/vitpelekhaty/dbmill-cli/cmd/commands.GitBranch={{.Env.PROJECT_BRANCH}}' -X 'github.com/vitpelekhaty/dbmill-cli/cmd/commands.GitCommit={{.ShortCommit}}' -X 'github.com/vitpelekhaty/dbmill-cli/cmd/commands.Built={{.Date}}'
+      - -s -X 'github.com/vitpelekhaty/dbmill-cli/cmd/commands.Version={{.Version}}' -X 'github.com/vitpelekhaty/dbmill-cli/cmd/commands.GitCommit={{.ShortCommit}}' -X 'github.com/vitpelekhaty/dbmill-cli/cmd/commands.Built={{.Date}}'
 archives:
 - replacements:
     darwin: Darwin
