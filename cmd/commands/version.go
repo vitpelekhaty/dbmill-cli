@@ -48,4 +48,4 @@ const mill = `
 `
 
 const app = "dbmill-cli"
-const appDescription = ""
+const appDescription = "another yet database automation tool"
