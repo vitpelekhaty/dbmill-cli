@@ -1,8 +1,6 @@
 package sqlserver
 
 import (
-	"context"
-	"database/sql"
 	"fmt"
 )
 
@@ -144,60 +142,6 @@ func (perms UserPerms) Users() []string {
 	}
 
 	return users
-}
-
-// Permissions возвращает разрешения на объекты БД
-func (command *ScriptsFolderCommand) Permissions() (ObjectPermissions, error) {
-	ctx, cancelFunc := context.WithTimeout(context.Background(), timeout)
-	defer cancelFunc()
-
-	stmt, err := command.engine.db.PrepareContext(ctx, selectPermissions)
-
-	if err != nil {
-		return nil, err
-	}
-
-	defer stmt.Close()
-
-	rows, err := stmt.QueryContext(ctx)
-
-	if err != nil {
-		return nil, err
-	}
-
-	defer rows.Close()
-
-	var (
-		nullableSchema sql.NullString
-		schema         string
-		object         string
-		permission     string
-		state          string
-		user           string
-	)
-
-	perms := make(ObjectPermissions)
-
-	for rows.Next() {
-		err = rows.Scan(&nullableSchema, &object, &permission, &state,
-			&user)
-
-		if err != nil {
-			return nil, err
-		}
-
-		if nullableSchema.Valid {
-			schema = nullableSchema.String
-		}
-
-		err = perms.Append(schema, object, permission, state, user)
-
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return perms, nil
 }
 
 const selectPermissions = `

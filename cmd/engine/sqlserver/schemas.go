@@ -19,7 +19,7 @@ func (command *ScriptsFolderCommand) writeSchemaDefinition(ctx context.Context, 
 	}
 
 	if obj.Type() != output.Schema {
-		return object, fmt.Errorf("object %s is not a schema", obj.SchemaAndName(true))
+		return object, fmt.Errorf("object %s is not a Schema", obj.SchemaAndName(true))
 	}
 
 	owner := obj.Owner()

@@ -26,7 +26,7 @@ func Credentials(connection string) (username, password string, err error) {
 		}
 
 		if strings.Trim(username, " ") == "" {
-			username = q.Get("user id")
+			username = q.Get("user ID")
 		}
 
 		if strings.Trim(password, " ") == "" {
@@ -70,7 +70,7 @@ func SetCredentials(connection, username, password string) (string, error) {
 		return connection, err
 	}
 
-	un := q.Get("user id")
+	un := q.Get("user ID")
 
 	if user.Username() == "" && un == "" {
 		if !emptyPassword {
@@ -87,9 +87,9 @@ func SetCredentials(connection, username, password string) (string, error) {
 	}
 
 	if !emptyUsername {
-		q.Set("user id", username)
+		q.Set("user ID", username)
 	} else {
-		q.Del("user id")
+		q.Del("user ID")
 	}
 
 	if !emptyPassword {

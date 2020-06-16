@@ -21,13 +21,17 @@ type ScriptsFolderCommand struct {
 	includeStaticData  bool
 	types              map[output.DatabaseObjectType]bool
 	definitionCallback commands.ObjectDefinitionCallback
-	userDefinedTypes   userDefinedTypes
+	metaReader         *MetadataReader
 
-	permissions ObjectPermissions
+	userDefinedTypes UserDefinedTypes
+	permissions      ObjectPermissions
+	columns          ObjectColumns
 }
 
 // NewScriptsFolderCommand конструктор ScriptsFolderCommand
 func NewScriptsFolderCommand(engine *Engine, options ...commands.ScriptsFolderOption) *ScriptsFolderCommand {
+	metaReader, _ := engine.MetadataReader()
+
 	command := &ScriptsFolderCommand{
 		engine:             engine,
 		include:            nil,
@@ -36,8 +40,11 @@ func NewScriptsFolderCommand(engine *Engine, options ...commands.ScriptsFolderOp
 		includeStaticData:  false,
 		types:              nil,
 		definitionCallback: nil,
-		permissions:        nil,
-		userDefinedTypes:   nil,
+		metaReader:         metaReader,
+
+		permissions:      nil,
+		userDefinedTypes: nil,
+		columns:          nil,
 	}
 
 	for _, option := range options {
@@ -49,7 +56,9 @@ func NewScriptsFolderCommand(engine *Engine, options ...commands.ScriptsFolderOp
 
 // Run запускает выполнение команды
 func (command *ScriptsFolderCommand) Run() error {
-	permissions, err := command.Permissions()
+	ctx := context.Background()
+
+	permissions, err := command.metaReader.Permissions(ctx)
 
 	if err != nil {
 		return err
@@ -57,7 +66,7 @@ func (command *ScriptsFolderCommand) Run() error {
 
 	command.permissions = permissions
 
-	userTypes, err := command.userTypes()
+	userTypes, err := command.metaReader.UserDefinedTypes(ctx)
 
 	if err != nil {
 		return err
@@ -291,13 +300,13 @@ func (command *ScriptsFolderCommand) databaseObjects() (chan rxgo.Item, error) {
 }
 
 const selectObjects = `
-select info.catalog, info.[schema], info.name, info.type, info.definition,
+select info.Catalog, info.[Schema], info.name, info.type, info.definition,
        info.owner, info.uses_quoted_identifier, info.uses_ansi_nulls
 from (
     select
         [order] = 1,
-        [catalog] = schemas.CATALOG_NAME,
-        [schema] = schemas.SCHEMA_NAME,
+        [Catalog] = schemas.CATALOG_NAME,
+        [Schema] = schemas.SCHEMA_NAME,
         [name] = null,
         [type] = N'SCHEMA',
         [definition] = null,
@@ -310,8 +319,8 @@ from (
     union
     select
         [order] = 2,
-        [catalog] = db_name(),
-        [schema] = schema_name(types.schema_id),
+        [Catalog] = db_name(),
+        [Schema] = schema_name(types.schema_id),
         [name] = types.name,
         [type] = N'DATA TYPE',
         [definition] = null,
@@ -323,8 +332,8 @@ from (
     union
     select
         [order] = 2,
-        [catalog] = db_name(),
-        [schema] = schema_name(types.schema_id),
+        [Catalog] = db_name(),
+        [Schema] = schema_name(types.schema_id),
         [name] = types.name,
         [type] = N'TABLE TYPE',
         [definition] = null,
@@ -336,8 +345,8 @@ from (
     union
     select
         [order] = 3,
-        [catalog] = tables.TABLE_CATALOG,
-        [schema] = isnull(schema_name(objects.schema_id), tables.TABLE_SCHEMA),
+        [Catalog] = tables.TABLE_CATALOG,
+        [Schema] = isnull(schema_name(objects.schema_id), tables.TABLE_SCHEMA),
         [name] = tables.TABLE_NAME,
         [type] = tables.TABLE_TYPE,
         [definition] = null,
@@ -350,8 +359,8 @@ from (
     union
     select
         [order] = 4,
-        [catalog] = views.TABLE_CATALOG,
-        [schema] = isnull(schema_name(objects.schema_id), views.TABLE_SCHEMA),
+        [Catalog] = views.TABLE_CATALOG,
+        [Schema] = isnull(schema_name(objects.schema_id), views.TABLE_SCHEMA),
         [name] = views.TABLE_NAME,
         [type] = N'VIEW',
         [definition] = isnull(object_definition(objects.object_id), views.VIEW_DEFINITION),
@@ -364,8 +373,8 @@ from (
     union
     select
         [order] = 5,
-        [catalog] = db_name(),
-        [schema] = schema_name(objects.schema_id),
+        [Catalog] = db_name(),
+        [Schema] = schema_name(objects.schema_id),
         [name] = objects.name,
         [type] = N'TRIGGER',
         [definition] = object_definition(objects.object_id),
@@ -378,8 +387,8 @@ from (
     union
     select
         [order] = 6,
-        [catalog] = functions.ROUTINE_CATALOG,
-        [schema] = isnull(schema_name(objects.schema_id), functions.ROUTINE_SCHEMA),
+        [Catalog] = functions.ROUTINE_CATALOG,
+        [Schema] = isnull(schema_name(objects.schema_id), functions.ROUTINE_SCHEMA),
         [name] = functions.ROUTINE_NAME,
         [type] = functions.ROUTINE_TYPE,
         [definition] = isnull(object_definition(objects.object_id), functions.ROUTINE_DEFINITION),
@@ -393,8 +402,8 @@ from (
     union
     select
         [order] = 7,
-        [catalog] = procedures.ROUTINE_CATALOG,
-        [schema] = isnull(schema_name(objects.schema_id), procedures.ROUTINE_SCHEMA),
+        [Catalog] = procedures.ROUTINE_CATALOG,
+        [Schema] = isnull(schema_name(objects.schema_id), procedures.ROUTINE_SCHEMA),
         [name] = procedures.ROUTINE_NAME,
         [type] = procedures.ROUTINE_TYPE,
         [definition] = isnull(object_definition(objects.object_id), procedures.ROUTINE_DEFINITION),
@@ -406,5 +415,5 @@ from (
             inner join sys.sql_modules as modules on (objects.object_id = modules.object_id)
     where procedures.ROUTINE_TYPE = N'PROCEDURE'
 ) as info
-order by info.catalog, info.[order], info.type, info.[schema], info.name
+order by info.Catalog, info.[order], info.type, info.[Schema], info.name
 `

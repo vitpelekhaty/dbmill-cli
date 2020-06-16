@@ -22,7 +22,7 @@ type IDatabaseObject interface {
 	DefinitionExists() bool
 	// Type возвращает тип объекта БД
 	Type() output.DatabaseObjectType
-	// SchemaAndName возвращает наименование объекта в формате %schema%.%name%
+	// SchemaAndName возвращает наименование объекта в формате %Schema%.%name%
 	SchemaAndName(useBrackets bool) string
 	// Owner возвращает владельца объекта БД
 	Owner() string
@@ -44,9 +44,9 @@ type ISQLModule interface {
 
 // databaseObject базовая структура объекта БД
 type databaseObject struct {
-	// catalog наименование БД
+	// Catalog наименование БД
 	catalog sql.NullString
-	// schema схема БД
+	// Schema схема БД
 	schema sql.NullString
 	// name наименование объекта БД
 	name sql.NullString
@@ -143,7 +143,7 @@ func (object databaseObject) Type() output.DatabaseObjectType {
 	}
 }
 
-// SchemaAndName наименование объекта в формате %schema%.%name%
+// SchemaAndName наименование объекта в формате %Schema%.%name%
 func (object databaseObject) SchemaAndName(useBrackets bool) string {
 	schema := object.Schema()
 	name := object.Name()

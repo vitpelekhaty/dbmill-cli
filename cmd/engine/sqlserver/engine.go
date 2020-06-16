@@ -3,7 +3,6 @@ package sqlserver
 import (
 	"context"
 	"database/sql"
-	"time"
 
 	_ "github.com/denisenkom/go-mssqldb"
 
@@ -18,8 +17,6 @@ type Engine struct {
 	logger log.ILogger
 	output output.IScriptsFolderOutput
 }
-
-const timeout = time.Second * 30
 
 // NewEngine возвращает экземпляр Engine
 func NewEngine(connection string) (*Engine, error) {
@@ -59,6 +56,11 @@ func (engine *Engine) SetOutputDirectoryStructure(dirStruct output.IScriptsFolde
 // ScriptsFolder создает скрипты объектов БД по указанному пути path
 func (engine *Engine) ScriptsFolder(options ...commands.ScriptsFolderOption) commands.IScriptsFolderCommand {
 	return NewScriptsFolderCommand(engine, options...)
+}
+
+// MetadataReader возвращает объект чтения метаданных
+func (engine *Engine) MetadataReader() (*MetadataReader, error) {
+	return NewMetadataReader(engine)
 }
 
 // Log создает запись в логе, если указан логгер

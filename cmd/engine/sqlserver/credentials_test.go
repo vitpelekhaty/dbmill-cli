@@ -57,21 +57,21 @@ var cases4Credentials = []struct {
 		},
 	},
 	{
-		connection: "sqlserver://localhost:3112/instance?user id=username",
+		connection: "sqlserver://localhost:3112/instance?user ID=username",
 		want: credentials{
 			username: "username",
 			password: "",
 		},
 	},
 	{
-		connection: "sqlserver://localhost:3112/instance?user id=username&password=password",
+		connection: "sqlserver://localhost:3112/instance?user ID=username&password=password",
 		want: credentials{
 			username: "username",
 			password: "password",
 		},
 	},
 	{
-		connection: "sqlserver://username:password@localhost:3112/instance?user id=username2&password=password2",
+		connection: "sqlserver://username:password@localhost:3112/instance?user ID=username2&password=password2",
 		want: credentials{
 			username: "username",
 			password: "password",
@@ -185,28 +185,28 @@ var cases4SetCredentials2 = []struct {
 }{
 
 	{
-		connection: "sqlserver://localhost?user id=username&password=password",
+		connection: "sqlserver://localhost?user ID=username&password=password",
 		user: credentials{
 			username: "username1",
 			password: "password2",
 		},
 	},
 	{
-		connection: "sqlserver://localhost?user id=username&password=password",
+		connection: "sqlserver://localhost?user ID=username&password=password",
 		user: credentials{
 			username: "username1",
 			password: "",
 		},
 	},
 	{
-		connection: "sqlserver://localhost?user id=username&password=password",
+		connection: "sqlserver://localhost?user ID=username&password=password",
 		user: credentials{
 			username: "",
 			password: "",
 		},
 	},
 	{
-		connection: "sqlserver://localhost?user id=username",
+		connection: "sqlserver://localhost?user ID=username",
 		user: credentials{
 			username: "username1",
 			password: "password1",
@@ -236,7 +236,7 @@ func TestSetCredentials2(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		username := q.Get("user id")
+		username := q.Get("user ID")
 		password := q.Get("password")
 
 		done = username == test.user.username && password == test.user.password

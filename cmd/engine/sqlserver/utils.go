@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// SchemaAndObject возвращает наименование объекта в формате %schema%.%name%
+// SchemaAndObject возвращает наименование объекта в формате %Schema%.%name%
 func SchemaAndObject(schema, objectName string, useBrackets bool) string {
 	if strings.Trim(schema, " ") != "" {
 		if strings.Trim(objectName, " ") != "" {

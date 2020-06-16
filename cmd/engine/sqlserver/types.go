@@ -9,32 +9,32 @@ import (
 	"github.com/vitpelekhaty/dbmill-cli/internal/pkg/output"
 )
 
-type userDefinedType struct {
-	catalog           string
-	typeName          string
-	schema            string
-	parentTypeName    string
+type UserDefinedType struct {
+	Catalog           string
+	TypeName          string
+	Schema            string
+	ParentTypeName    string
 	maxLength         sql.NullString
 	precision         sql.NullInt32
 	scale             sql.NullInt32
 	collation         sql.NullString
-	isNullable        bool
-	isTableType       bool
-	isMemoryOptimized bool
+	IsNullable        bool
+	IsTableType       bool
+	IsMemoryOptimized bool
 }
 
-// SchemaAndObject возвращает наименование объекта в формате %schema%.%name%
-func (udt userDefinedType) SchemaAndName(useBrackets bool) string {
-	return SchemaAndObject(udt.schema, udt.typeName, useBrackets)
+// SchemaAndObject возвращает наименование объекта в формате %Schema%.%name%
+func (udt UserDefinedType) SchemaAndName(useBrackets bool) string {
+	return SchemaAndObject(udt.Schema, udt.TypeName, useBrackets)
 }
 
 // HasMaxLength проверяет, указана ли максимальная длина (в байтах) для типа
-func (udt userDefinedType) HasMaxLength() bool {
+func (udt UserDefinedType) HasMaxLength() bool {
 	return udt.maxLength.Valid
 }
 
 // MaxLength максимальная длина (в байтах) типа
-func (udt userDefinedType) MaxLength() string {
+func (udt UserDefinedType) MaxLength() string {
 	if udt.maxLength.Valid {
 		return udt.maxLength.String
 	}
@@ -43,12 +43,12 @@ func (udt userDefinedType) MaxLength() string {
 }
 
 // HasPrecision проверяет, указана ли точность
-func (udt userDefinedType) HasPrecision() bool {
+func (udt UserDefinedType) HasPrecision() bool {
 	return udt.precision.Valid
 }
 
 // Precision точность
-func (udt userDefinedType) Precision() int {
+func (udt UserDefinedType) Precision() int {
 	if udt.precision.Valid {
 		return int(udt.precision.Int32)
 	}
@@ -57,12 +57,12 @@ func (udt userDefinedType) Precision() int {
 }
 
 // HasScale проверяет, указан ли масштаб
-func (udt userDefinedType) HasScale() bool {
+func (udt UserDefinedType) HasScale() bool {
 	return udt.scale.Valid
 }
 
 // Scale масштаб
-func (udt userDefinedType) Scale() int {
+func (udt UserDefinedType) Scale() int {
 	if udt.scale.Valid {
 		return int(udt.scale.Int32)
 	}
@@ -71,12 +71,12 @@ func (udt userDefinedType) Scale() int {
 }
 
 // HasCollation провеяет, указан ли collation
-func (udt userDefinedType) HasCollation() bool {
+func (udt UserDefinedType) HasCollation() bool {
 	return udt.collation.Valid
 }
 
 // Collation
-func (udt userDefinedType) Collation() string {
+func (udt UserDefinedType) Collation() string {
 	if udt.collation.Valid {
 		return udt.collation.String
 	}
@@ -84,9 +84,9 @@ func (udt userDefinedType) Collation() string {
 	return ""
 }
 
-type userDefinedTypes map[string]*userDefinedType
+type UserDefinedTypes map[string]*UserDefinedType
 
-func (types userDefinedTypes) append(udt *userDefinedType) {
+func (types UserDefinedTypes) append(udt *UserDefinedType) {
 	if udt == nil {
 		return
 	}
@@ -115,7 +115,7 @@ func (command *ScriptsFolderCommand) writeDomainDefinition(ctx context.Context, 
 	}
 
 	if obj.Type() == output.UserDefinedDataType {
-		if !domain.isTableType {
+		if !domain.IsTableType {
 			return command.writeDataTypeDefinition(ctx, obj, domain)
 		} else {
 			return obj, fmt.Errorf("%s is not data type", name)
@@ -123,7 +123,7 @@ func (command *ScriptsFolderCommand) writeDomainDefinition(ctx context.Context, 
 	}
 
 	if obj.Type() == output.UserDefinedTableType {
-		if domain.isTableType {
+		if domain.IsTableType {
 			return command.writeTableTypeDefinition(ctx, obj, domain)
 		} else {
 			return obj, fmt.Errorf("%s is not table type", name)
@@ -134,11 +134,11 @@ func (command *ScriptsFolderCommand) writeDomainDefinition(ctx context.Context, 
 }
 
 func (command *ScriptsFolderCommand) writeDataTypeDefinition(ctx context.Context, object IDatabaseObject,
-	domain *userDefinedType) (IDatabaseObject, error) {
+	domain *UserDefinedType) (IDatabaseObject, error) {
 	const dataTypeDefinition = "CREATE TYPE %s FROM %s\nGO"
 
 	userTypeName := domain.SchemaAndName(true)
-	t := "[" + domain.parentTypeName + "]"
+	t := "[" + domain.ParentTypeName + "]"
 
 	if domain.HasMaxLength() {
 		t = fmt.Sprintf("%s(%s)", t, domain.MaxLength())
@@ -148,7 +148,7 @@ func (command *ScriptsFolderCommand) writeDataTypeDefinition(ctx context.Context
 		}
 	}
 
-	if !domain.isNullable {
+	if !domain.IsNullable {
 		t = t + " NOT NULL"
 	}
 
@@ -159,72 +159,8 @@ func (command *ScriptsFolderCommand) writeDataTypeDefinition(ctx context.Context
 }
 
 func (command *ScriptsFolderCommand) writeTableTypeDefinition(ctx context.Context, object IDatabaseObject,
-	domain *userDefinedType) (IDatabaseObject, error) {
+	domain *UserDefinedType) (IDatabaseObject, error) {
 	return object, nil
-}
-
-func (command *ScriptsFolderCommand) userTypes() (userDefinedTypes, error) {
-	ctx, cancelFunc := context.WithTimeout(context.Background(), timeout)
-	defer cancelFunc()
-
-	stmt, err := command.engine.db.PrepareContext(ctx, selectUserDefinedTypes)
-
-	if err != nil {
-		return nil, err
-	}
-
-	defer stmt.Close()
-
-	rows, err := stmt.QueryContext(ctx)
-
-	if err != nil {
-		return nil, err
-	}
-
-	defer rows.Close()
-
-	var (
-		catalog           string
-		typeName          string
-		schema            string
-		parentTypeName    string
-		maxLength         sql.NullString
-		precision         sql.NullInt32
-		scale             sql.NullInt32
-		collation         sql.NullString
-		isNullable        bool
-		isTableType       bool
-		isMemoryOptimized bool
-	)
-
-	types := make(userDefinedTypes)
-
-	for rows.Next() {
-		err = rows.Scan(&catalog, &typeName, &schema, &parentTypeName, &maxLength, &precision, &scale, &collation,
-			&isNullable, &isTableType, &isMemoryOptimized)
-
-		if err != nil {
-			return nil, err
-		}
-
-		t := &userDefinedType{
-			catalog:           catalog,
-			typeName:          typeName,
-			schema:            schema,
-			parentTypeName:    parentTypeName,
-			maxLength:         maxLength,
-			precision:         precision,
-			scale:             scale,
-			collation:         collation,
-			isNullable:        isNullable,
-			isTableType:       isTableType,
-			isMemoryOptimized: isMemoryOptimized,
-		}
-
-		types.append(t)
-	}
-
-	return types, nil
 }
 
 const selectUserDefinedTypes = `
