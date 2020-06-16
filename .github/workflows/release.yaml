@@ -19,7 +19,7 @@ jobs:
     - name: Extract branch
       id: extract_branch
       shell: bash
-      run: echo "##[set-output name=branch;]$(git rev-parse --abbrev-ref HEAD)"
+      run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF##*/})"
     - name: Unshallow
       run: git fetch --prune --unshallow
     - name: Run Goreleaser
