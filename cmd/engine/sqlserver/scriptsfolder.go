@@ -19,6 +19,7 @@ type ScriptsFolderCommand struct {
 	exclude            filter.IFilter
 	decrypt            bool
 	includeStaticData  bool
+	skipPermissions    bool
 	types              map[output.DatabaseObjectType]bool
 	definitionCallback commands.ObjectDefinitionCallback
 	metaReader         *MetadataReader
@@ -38,6 +39,7 @@ func NewScriptsFolderCommand(engine *Engine, options ...commands.ScriptsFolderOp
 		exclude:            nil,
 		decrypt:            false,
 		includeStaticData:  false,
+		skipPermissions:    false,
 		types:              nil,
 		definitionCallback: nil,
 		metaReader:         metaReader,
@@ -174,6 +176,11 @@ func (command *ScriptsFolderCommand) StaticData(on bool) {
 // Decrypt по возможности расшифровывать определения объектов БД
 func (command *ScriptsFolderCommand) Decrypt(on bool) {
 	command.decrypt = on
+}
+
+// SkipPermissions не добавлять в скрипты разрешения на объект
+func (command *ScriptsFolderCommand) SkipPermissions(on bool) {
+	command.skipPermissions = on
 }
 
 // SetDatabaseObjectTypes устанавливает список типов объектов БД, которые необходимо выгрузить в скрипты

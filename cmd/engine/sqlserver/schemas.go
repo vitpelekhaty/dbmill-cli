@@ -32,23 +32,25 @@ func (command *ScriptsFolderCommand) writeSchemaDefinition(ctx context.Context, 
 		definition = fmt.Sprintf(schemaShortDefinition, obj.Schema())
 	}
 
-	objectName := obj.SchemaAndName(true)
-	permissions := command.permissions[objectName]
+	if !command.skipPermissions {
+		objectName := obj.SchemaAndName(true)
+		permissions := command.permissions[objectName]
 
-	if len(permissions) > 0 {
-		var stringPermissions string
+		if len(permissions) > 0 {
+			var stringPermissions string
 
-		for user, userPermissions := range permissions {
-			for state, permissions := range userPermissions {
-				if len(permissions) > 0 {
-					perms := permissions.List()
-					sort.Strings(perms)
+			for user, userPermissions := range permissions {
+				for state, permissions := range userPermissions {
+					if len(permissions) > 0 {
+						perms := permissions.List()
+						sort.Strings(perms)
 
-					stringPermissions = strings.Join(perms, ",\n  ")
-					stringPermissions = fmt.Sprintf("%s\n  %s\nON SCHEMA :: %s TO [%s]\nGO", state.String(),
-						stringPermissions, objectName, user)
+						stringPermissions = strings.Join(perms, ",\n  ")
+						stringPermissions = fmt.Sprintf("%s\n  %s\nON SCHEMA :: %s TO [%s]\nGO", state.String(),
+							stringPermissions, objectName, user)
 
-					definition = fmt.Sprintf("%s\n\n%s", definition, stringPermissions)
+						definition = fmt.Sprintf("%s\n\n%s", definition, stringPermissions)
+					}
 				}
 			}
 		}

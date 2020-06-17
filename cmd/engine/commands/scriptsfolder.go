@@ -56,6 +56,13 @@ func WithDatabaseObjectTypes(types []output.DatabaseObjectType) ScriptsFolderOpt
 	}
 }
 
+// WithSkipPermissions указывает, что не нужно добавлять в скрипты разрешения на объект
+func WithSkipPermissions() ScriptsFolderOption {
+	return func(command IScriptsFolderCommand) {
+		command.SkipPermissions(true)
+	}
+}
+
 // IScriptsFolderCommand интерфейс команды ScriptsFolder
 type IScriptsFolderCommand interface {
 	IEngineCommand
@@ -74,4 +81,6 @@ type IScriptsFolderCommand interface {
 	Decrypt(on bool)
 	// SetDatabaseObjectTypes устанавливает список типов объектов БД, которые необходимо выгрузить в скрипты
 	SetDatabaseObjectTypes(types []output.DatabaseObjectType)
+	// SkipPermissions не добавлять в скрипты разрешения на объект
+	SkipPermissions(on bool)
 }

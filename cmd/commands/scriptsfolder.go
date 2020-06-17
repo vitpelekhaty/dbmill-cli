@@ -127,6 +127,10 @@ var cmdScriptsFolder = &cobra.Command{
 			commandOptions = append(commandOptions, commands.WithStaticData())
 		}
 
+		if SkipPermissions {
+			commandOptions = append(commandOptions, commands.WithSkipPermissions())
+		}
+
 		engn, err := engine.New(Database, engineOptions...)
 
 		if err != nil {

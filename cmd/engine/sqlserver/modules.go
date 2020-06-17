@@ -99,22 +99,24 @@ func (command *ScriptsFolderCommand) writeModuleDefinition(ctx context.Context, 
 		definition = fmt.Sprintf("SET %s ON\nGO\n%s", s, definition)
 	}
 
-	name := object.SchemaAndName(true)
-	permissions := command.permissions[name]
+	if !command.skipPermissions {
+		name := object.SchemaAndName(true)
+		permissions := command.permissions[name]
 
-	if len(permissions) > 0 {
-		users := permissions.Users()
-		sort.Strings(users)
+		if len(permissions) > 0 {
+			users := permissions.Users()
+			sort.Strings(users)
 
-		for _, user := range users {
-			states := permissions[user]
+			for _, user := range users {
+				states := permissions[user]
 
-			for state, perms := range states {
-				ps := perms.List()
-				sort.Strings(ps)
+				for state, perms := range states {
+					ps := perms.List()
+					sort.Strings(ps)
 
-				for _, p := range ps {
-					definition = fmt.Sprintf("%s\n\n%s %s ON %s TO [%s]\nGO", definition, state, p, name, user)
+					for _, p := range ps {
+						definition = fmt.Sprintf("%s\n\n%s %s ON %s TO [%s]\nGO", definition, state, p, name, user)
+					}
 				}
 			}
 		}

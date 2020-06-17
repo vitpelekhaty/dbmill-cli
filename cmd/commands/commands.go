@@ -37,6 +37,8 @@ func init() {
 		"decrypt objects")
 	cmdScriptsFolder.Flags().BoolVarP(&IncludeData, "include-data", "", false,
 		"save data in scripts")
+	cmdScriptsFolder.Flags().BoolVarP(&SkipPermissions, "skip-permissions", "", false,
+		"skip permissions")
 
 	cmdRoot.AddCommand(cmdScriptsFolder, cmdVersion)
 }
