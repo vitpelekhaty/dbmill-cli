@@ -2,13 +2,16 @@ package sqlserver
 
 import (
 	"database/sql"
+	"errors"
+	"fmt"
+	"strings"
 )
 
 // Column поле таблицы/табличного типа
 type Column struct {
 	ID                 int
 	Name               string
-	Description        string
+	description        sql.NullString
 	TypeName           string
 	maxLength          sql.NullString
 	precision          sql.NullInt32
@@ -132,11 +135,75 @@ func (col Column) GenerateAlwaysDefinition() string {
 	return ""
 }
 
+// HasDescription проверяет, есть ли описание поля
+func (col Column) HasDescription() bool {
+	return col.description.Valid
+}
+
+// Description возвращает описание поля
+func (col Column) Description() string {
+	if col.description.Valid {
+		return col.description.String
+	}
+
+	return ""
+}
+
 // Columns поля
-type Columns map[string]Column
+type Columns map[string]*Column
+
+// SortedList возвращает срез полей
+func (columns Columns) List() []*Column {
+	length := len(columns)
+
+	if length == 0 {
+		return nil
+	}
+
+	list := make([]*Column, length)
+
+	var index int
+
+	for _, col := range columns {
+		list[index] = col
+		index++
+	}
+
+	return list
+}
+
+// ByColumnID реализация sort.Interface для сортировки полей по идентификатору
+type ByColumnID []*Column
 
 // ObjectColumns поля объектов (таблиц, табличных типов) БД
 type ObjectColumns map[string]Columns
+
+func (columns ObjectColumns) Append(objectSchema, objectName string, column *Column) error {
+	name := SchemaAndObject(objectSchema, objectName, true)
+
+	if strings.Trim(objectSchema, " ") == "" || strings.Trim(objectName, " ") == "" {
+		return fmt.Errorf("impossible to identify the object %s", name)
+	}
+
+	if column == nil {
+		return errors.New("column object cannot be nil")
+	}
+
+	if strings.Trim(column.Name, " ") == "" {
+		return errors.New("impossible to identify the column")
+	}
+
+	if cols, ok := columns[name]; ok {
+		cols[column.Name] = column
+	} else {
+		cols := make(Columns)
+		cols[column.Name] = column
+
+		columns[name] = cols
+	}
+
+	return nil
+}
 
 const selectColumns = `
 select columns.catalog, columns.object_schema, columns.object_name, columns.column_id, columns.column_name,

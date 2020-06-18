@@ -60,23 +60,13 @@ func NewScriptsFolderCommand(engine *Engine, options ...commands.ScriptsFolderOp
 func (command *ScriptsFolderCommand) Run() error {
 	ctx := context.Background()
 
-	permissions, err := command.metaReader.Permissions(ctx)
+	err := command.ReadMetadata(ctx)
 
 	if err != nil {
 		return err
 	}
 
-	command.permissions = permissions
-
-	userTypes, err := command.metaReader.UserDefinedTypes(ctx)
-
-	if err != nil {
-		return err
-	}
-
-	command.userDefinedTypes = userTypes
-
-	objects, err := command.databaseObjects()
+	objects, err := command.databaseObjects(ctx)
 
 	if err != nil {
 		return err
@@ -151,6 +141,34 @@ func (command *ScriptsFolderCommand) writeDefinition(ctx context.Context, object
 	return object, nil
 }
 
+func (command *ScriptsFolderCommand) ReadMetadata(ctx context.Context) error {
+	permissions, err := command.metaReader.Permissions(ctx)
+
+	if err != nil {
+		return err
+	}
+
+	command.permissions = permissions
+
+	userTypes, err := command.metaReader.UserDefinedTypes(ctx)
+
+	if err != nil {
+		return err
+	}
+
+	command.userDefinedTypes = userTypes
+
+	columns, err := command.metaReader.ObjectColumns(ctx)
+
+	if err != nil {
+		return err
+	}
+
+	command.columns = columns
+
+	return nil
+}
+
 // SetIncludedObjects устанавливает фильтр, позволяющий выбирать только те объекты БД, которые должны быть
 // обработаны
 func (command *ScriptsFolderCommand) SetIncludedObjects(filter filter.IFilter) {
@@ -223,9 +241,7 @@ func (command *ScriptsFolderCommand) ObjectTypeIncluded(object output.DatabaseOb
 	return ok
 }
 
-func (command *ScriptsFolderCommand) databaseObjects() (chan rxgo.Item, error) {
-	ctx := context.Background()
-
+func (command *ScriptsFolderCommand) databaseObjects(ctx context.Context) (chan rxgo.Item, error) {
 	stmt, err := command.engine.db.PrepareContext(ctx, selectObjects)
 
 	if err != nil {
