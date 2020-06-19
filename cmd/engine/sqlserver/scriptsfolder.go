@@ -60,6 +60,8 @@ func NewScriptsFolderCommand(engine *Engine, options ...commands.ScriptsFolderOp
 func (command *ScriptsFolderCommand) Run() error {
 	ctx := context.Background()
 
+	command.engine.Log(log.DebugLevel, "metadata reading...")
+
 	err := command.ReadMetadata(ctx)
 
 	if err != nil {
@@ -105,7 +107,7 @@ func (command *ScriptsFolderCommand) Run() error {
 				command.engine.Log(log.ErrorLevel, err)
 			}
 		}, func() {
-			command.engine.Log(log.InfoLevel, "done")
+			command.engine.Log(log.DebugLevel, "done")
 		})
 
 	return nil

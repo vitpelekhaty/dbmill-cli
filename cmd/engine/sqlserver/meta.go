@@ -164,6 +164,8 @@ func (reader *MetadataReader) ObjectColumns(ctx context.Context) (ObjectColumns,
 		isANSIPadded       bool
 		isRowGUIDCol       bool
 		isIdentity         bool
+		seedValue          sql.NullInt32
+		incValue           sql.NullInt32
 		isComputed         bool
 		compute            sql.NullString
 		isFileStream       bool
@@ -182,41 +184,43 @@ func (reader *MetadataReader) ObjectColumns(ctx context.Context) (ObjectColumns,
 
 	for rows.Next() {
 		err = rows.Scan(&catalog, &schema, &objectName, &columnID, &columnName, &description, &typeName, &maxLength,
-			&precision, &scale, &collation, &isNullable, &isANSIPadded, &isRowGUIDCol, &isIdentity, &isComputed,
-			&compute, &isFileStream, &isReplicated, &isNonSQLSubscribed, &isMergePublished, &isDTSReplicated,
-			&isXMLDocument, &def, &isSparse, &isColumnSet, &generateAlways, &isHidden, &isMasked)
+			&precision, &scale, &collation, &isNullable, &isANSIPadded, &isRowGUIDCol, &isIdentity, &seedValue,
+			&incValue, &isComputed, &compute, &isFileStream, &isReplicated, &isNonSQLSubscribed, &isMergePublished,
+			&isDTSReplicated, &isXMLDocument, &def, &isSparse, &isColumnSet, &generateAlways, &isHidden, &isMasked)
 
 		if err != nil {
 			return nil, err
 		}
 
 		column := &Column{
-			ID:                 columnID,
-			Name:               columnName,
-			description:        description,
-			TypeName:           typeName,
-			maxLength:          maxLength,
-			precision:          precision,
-			scale:              scale,
-			collation:          collation,
-			IsNullable:         isNullable,
-			IsANSIPadded:       isANSIPadded,
-			IsRowGUIDCol:       isRowGUIDCol,
-			IsIdentity:         isIdentity,
-			isComputed:         isComputed,
-			compute:            compute,
-			IsFileStream:       isFileStream,
-			IsReplicated:       isReplicated,
-			IsNonSQLSubscribed: isNonSQLSubscribed,
-			IsMergePublished:   isMergePublished,
-			IsDTSReplicated:    isDTSReplicated,
-			IsXMLDocument:      isXMLDocument,
-			def:                def,
-			IsSparse:           isSparse,
-			IsColumnSet:        isColumnSet,
-			generateAlways:     generateAlways,
-			IsHidden:           isHidden,
-			IsMasked:           isMasked,
+			ID:                     columnID,
+			Name:                   columnName,
+			description:            description,
+			TypeName:               typeName,
+			maxLength:              maxLength,
+			precision:              precision,
+			scale:                  scale,
+			collation:              collation,
+			IsNullable:             isNullable,
+			IsANSIPadded:           isANSIPadded,
+			IsRowGUIDCol:           isRowGUIDCol,
+			IsIdentity:             isIdentity,
+			identitySeedValue:      seedValue,
+			identityIncrementValue: incValue,
+			isComputed:             isComputed,
+			compute:                compute,
+			IsFileStream:           isFileStream,
+			IsReplicated:           isReplicated,
+			IsNonSQLSubscribed:     isNonSQLSubscribed,
+			IsMergePublished:       isMergePublished,
+			IsDTSReplicated:        isDTSReplicated,
+			IsXMLDocument:          isXMLDocument,
+			def:                    def,
+			IsSparse:               isSparse,
+			IsColumnSet:            isColumnSet,
+			generateAlways:         generateAlways,
+			IsHidden:               isHidden,
+			IsMasked:               isMasked,
 		}
 
 		err = columns.Append(schema, objectName, column)

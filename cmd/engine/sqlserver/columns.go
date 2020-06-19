@@ -9,32 +9,34 @@ import (
 
 // Column поле таблицы/табличного типа
 type Column struct {
-	ID                 int
-	Name               string
-	description        sql.NullString
-	TypeName           string
-	maxLength          sql.NullString
-	precision          sql.NullInt32
-	scale              sql.NullInt32
-	collation          sql.NullString
-	IsNullable         bool
-	IsANSIPadded       bool
-	IsRowGUIDCol       bool
-	IsIdentity         bool
-	isComputed         bool
-	compute            sql.NullString
-	IsFileStream       bool
-	IsReplicated       bool
-	IsNonSQLSubscribed bool
-	IsMergePublished   bool
-	IsDTSReplicated    bool
-	IsXMLDocument      bool
-	def                sql.NullString
-	IsSparse           bool
-	IsColumnSet        bool
-	generateAlways     sql.NullString
-	IsHidden           bool
-	IsMasked           bool
+	ID                     int
+	Name                   string
+	description            sql.NullString
+	TypeName               string
+	maxLength              sql.NullString
+	precision              sql.NullInt32
+	scale                  sql.NullInt32
+	collation              sql.NullString
+	IsNullable             bool
+	IsANSIPadded           bool
+	IsRowGUIDCol           bool
+	IsIdentity             bool
+	identitySeedValue      sql.NullInt32
+	identityIncrementValue sql.NullInt32
+	isComputed             bool
+	compute                sql.NullString
+	IsFileStream           bool
+	IsReplicated           bool
+	IsNonSQLSubscribed     bool
+	IsMergePublished       bool
+	IsDTSReplicated        bool
+	IsXMLDocument          bool
+	def                    sql.NullString
+	IsSparse               bool
+	IsColumnSet            bool
+	generateAlways         sql.NullString
+	IsHidden               bool
+	IsMasked               bool
 }
 
 // HasMaxLength проверяет, указана ли максимальная длина (в байтах) для типа
@@ -149,6 +151,34 @@ func (col Column) Description() string {
 	return ""
 }
 
+// HasIdentitySeedValue проверяет, указано ли начальное значение для IDENTITY
+func (col Column) HasIdentitySeedValue() bool {
+	return col.identitySeedValue.Valid
+}
+
+// IdentitySeedValue возвращает начальное значение IDENTITY. Если не указано, то возвращает 1
+func (col Column) IdentitySeedValue() int {
+	if col.identitySeedValue.Valid {
+		return int(col.identitySeedValue.Int32)
+	}
+
+	return 1
+}
+
+// HasIdentityIncrementValue проверяет, указано ли значение шага IDENTITY
+func (col Column) HasIdentityIncrementValue() bool {
+	return col.identityIncrementValue.Valid
+}
+
+// IdentityIncrementValue возвращает значение шага IDENTITY
+func (col Column) IdentityIncrementValue() int {
+	if col.identityIncrementValue.Valid {
+		return int(col.identityIncrementValue.Int32)
+	}
+
+	return 1
+}
+
 // Columns поля
 type Columns map[string]*Column
 
@@ -206,10 +236,10 @@ const selectColumns = `
 select columns.catalog, columns.object_schema, columns.object_name, columns.column_id, columns.column_name,
     columns.column_description, columns.type_name, columns.max_length, columns.precision, columns.scale,
     columns.collation_name, columns.is_nullable, columns.is_ansi_padded, columns.is_rowguidcol, columns.is_identity,
-    columns.is_computed, columns.computed_definition, columns.is_filestream, columns.is_replicated,
-    columns.is_non_sql_subscribed, columns.is_merge_published, columns.is_dts_replicated, columns.is_xml_document,
-    columns.default_object_definition, columns.is_sparse, columns.is_column_set, columns.generated_always,
-    columns.is_hidden, columns.is_masked
+    columns.seed_value, columns.increment_value, columns.is_computed, columns.computed_definition,
+    columns.is_filestream, columns.is_replicated, columns.is_non_sql_subscribed, columns.is_merge_published,
+    columns.is_dts_replicated, columns.is_xml_document, columns.default_object_definition, columns.is_sparse,
+    columns.is_column_set, columns.generated_always, columns.is_hidden, columns.is_masked
 from (
     select
         [catalog] = db_name(),
@@ -217,31 +247,33 @@ from (
         [object_name] = types.name,
         [object_id] = columns.object_id,
         [column_id] = columns.column_id,
-        [column_name] = Columns.name,
+        [column_name] = columns.name,
         [column_description] = cast(sep.value as nvarchar(2048)),
         [type_name] = st.name,
         [max_length] = iif(
             st.name in ('char', 'varchar', 'nchar', 'nvarchar', 'binary', 'varbinary'),
-            iif(Columns.max_length = -1, 'max', cast(columns.max_length as nvarchar(4))),
+            iif(columns.max_length = -1, 'max', cast(columns.max_length as nvarchar(4))),
             iif(
                 st.name = 'float',
                 iif(
-                    Columns.max_length != 53, cast(columns.max_length as nvarchar(4)), null
+                    columns.max_length != 53, cast(columns.max_length as nvarchar(4)), null
                 ),
                 null
             )
         ),
         [precision] = iif(
-            st.name in ('decimal', 'numeric'), Columns.precision, null
+            st.name in ('decimal', 'numeric'), columns.precision, null
         ),
         [scale] = iif(
-            st.name in ('decimal', 'numeric'), Columns.scale, null
+            st.name in ('decimal', 'numeric'), columns.scale, null
         ),
         [collation_name] = columns.collation_name,
         [is_nullable] = columns.is_nullable,
         [is_ansi_padded] = columns.is_ansi_padded,
         [is_rowguidcol] = columns.is_rowguidcol,
         [is_identity] = columns.is_identity,
+        [seed_value] = ident.seed_value,
+        [increment_value] = ident.increment_value,
         [is_computed] = columns.is_computed,
         [computed_definition] = cc.definition,
         [is_filestream] = columns.is_filestream,
@@ -267,6 +299,8 @@ from (
                 left join sys.default_constraints as def on (columns.default_object_id = def.object_id)
                 left join sys.computed_columns as cc on (columns.object_id = cc.object_id)
                     and (columns.column_id = cc.column_id)
+                left join sys.identity_columns as ident on (columns.object_id = ident.object_id)
+                    and (columns.column_id = ident.column_id)
                 left join sys.extended_properties as sep on (columns.object_id = sep.major_id)
                     and (columns.column_id = sep.minor_id) and (sep.name = 'MS_Description')
                     and (sep.class = 1)
@@ -283,7 +317,7 @@ from (
         [type_name] = st.name,
         [max_length] = iif(
             st.name in ('char', 'varchar', 'nchar', 'nvarchar', 'binary', 'varbinary'),
-            iif(Columns.max_length = -1, 'max', cast(columns.max_length as nvarchar(4))),
+            iif(columns.max_length = -1, 'max', cast(columns.max_length as nvarchar(4))),
             iif(
                 st.name = 'float',
                 iif(
@@ -303,6 +337,8 @@ from (
         [is_ansi_padded] = columns.is_ansi_padded,
         [is_rowguidcol] = columns.is_rowguidcol,
         [is_identity] = columns.is_identity,
+        [seed_value] = ident.seed_value,
+        [increment_value] = ident.increment_value,
         [is_computed] = columns.is_computed,
         [computed_definition] = cc.definition,
         [is_filestream] = columns.is_filestream,
@@ -328,6 +364,8 @@ from (
                 left join sys.default_constraints as def on (columns.default_object_id = def.object_id)
                 left join sys.computed_columns as cc on (columns.object_id = cc.object_id)
                     and (columns.column_id = cc.column_id)
+                left join sys.identity_columns as ident on (columns.object_id = ident.object_id)
+                    and (columns.column_id = ident.column_id)
                 left join sys.extended_properties as sep on (columns.object_id = sep.major_id)
                     and (columns.column_id = sep.minor_id) and (sep.name = 'MS_Description')
                     and (sep.class = 1)
