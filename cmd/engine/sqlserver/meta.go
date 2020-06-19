@@ -156,6 +156,8 @@ func (reader *MetadataReader) ObjectColumns(ctx context.Context) (ObjectColumns,
 		columnName         string
 		description        sql.NullString
 		typeName           string
+		typeSchema         string
+		isUserDefinedType  bool
 		maxLength          sql.NullString
 		precision          sql.NullInt32
 		scale              sql.NullInt32
@@ -183,10 +185,11 @@ func (reader *MetadataReader) ObjectColumns(ctx context.Context) (ObjectColumns,
 	)
 
 	for rows.Next() {
-		err = rows.Scan(&catalog, &schema, &objectName, &columnID, &columnName, &description, &typeName, &maxLength,
-			&precision, &scale, &collation, &isNullable, &isANSIPadded, &isRowGUIDCol, &isIdentity, &seedValue,
-			&incValue, &isComputed, &compute, &isFileStream, &isReplicated, &isNonSQLSubscribed, &isMergePublished,
-			&isDTSReplicated, &isXMLDocument, &def, &isSparse, &isColumnSet, &generateAlways, &isHidden, &isMasked)
+		err = rows.Scan(&catalog, &schema, &objectName, &columnID, &columnName, &description, &typeName, &typeSchema,
+			&isUserDefinedType, &maxLength, &precision, &scale, &collation, &isNullable, &isANSIPadded, &isRowGUIDCol,
+			&isIdentity, &seedValue, &incValue, &isComputed, &compute, &isFileStream, &isReplicated,
+			&isNonSQLSubscribed, &isMergePublished, &isDTSReplicated, &isXMLDocument, &def, &isSparse, &isColumnSet,
+			&generateAlways, &isHidden, &isMasked)
 
 		if err != nil {
 			return nil, err
@@ -197,6 +200,8 @@ func (reader *MetadataReader) ObjectColumns(ctx context.Context) (ObjectColumns,
 			Name:                   columnName,
 			description:            description,
 			TypeName:               typeName,
+			TypeSchema:             typeSchema,
+			IsUserDefinedType:      isUserDefinedType,
 			maxLength:              maxLength,
 			precision:              precision,
 			scale:                  scale,

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -192,6 +193,40 @@ func (command *ScriptsFolderCommand) writeDataTypeDefinition(ctx context.Context
 
 func (command *ScriptsFolderCommand) writeTableTypeDefinition(ctx context.Context, object IDatabaseObject,
 	domain *UserDefinedType) (IDatabaseObject, error) {
+	var builder strings.Builder
+	userTypeName := domain.SchemaAndName(true)
+
+	builder.WriteString(fmt.Sprintf("CREATE TYPE %s AS TABLE", userTypeName))
+
+	columns := command.columns[userTypeName]
+
+	if len(columns) > 0 {
+		builder.WriteString(" (")
+
+		cols := columns.List()
+		sort.Slice(cols, func(i, j int) bool {
+			return cols[i].ID < cols[j].ID
+		})
+
+		for index, col := range cols {
+			if index > 0 {
+				builder.WriteRune(',')
+			}
+
+			builder.WriteString("\n  " + col.String())
+		}
+
+		builder.WriteString("\n)")
+	}
+
+	if domain.IsMemoryOptimized {
+		builder.WriteString("\nWITH (MEMORY_OPTIMIZED = ON)")
+	}
+
+	builder.WriteString("\nGO")
+
+	object.SetDefinition([]byte(builder.String()))
+
 	return object, nil
 }
 

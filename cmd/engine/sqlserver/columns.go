@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -13,6 +14,8 @@ type Column struct {
 	Name                   string
 	description            sql.NullString
 	TypeName               string
+	TypeSchema             string
+	IsUserDefinedType      bool
 	maxLength              sql.NullString
 	precision              sql.NullInt32
 	scale                  sql.NullInt32
@@ -179,6 +182,53 @@ func (col Column) IdentityIncrementValue() int {
 	return 1
 }
 
+// String возвращает определение поля
+func (col Column) String() string {
+	var builder strings.Builder
+
+	builder.WriteString("[" + col.Name + "] ")
+
+	if col.IsUserDefinedType {
+		if strings.Trim(col.TypeSchema, " ") != "" {
+			builder.WriteString("[" + col.TypeSchema + "].")
+		}
+	}
+
+	builder.WriteString("[" + col.TypeName + "]")
+
+	openedParentheses := col.HasMaxLength() || col.HasPrecision()
+
+	if openedParentheses {
+		builder.WriteRune('(')
+	}
+
+	if col.HasMaxLength() {
+		builder.WriteString(col.MaxLength())
+	} else {
+		if col.HasPrecision() {
+			precision := col.Precision()
+			scale := col.Scale()
+
+			builder.WriteString(strconv.Itoa(precision))
+
+			if scale > 0 {
+				builder.WriteString(", ")
+				builder.WriteString(strconv.Itoa(scale))
+			}
+		}
+	}
+
+	if openedParentheses {
+		builder.WriteRune(')')
+	}
+
+	if !col.IsNullable {
+		builder.WriteString(" NOT NULL")
+	}
+
+	return builder.String()
+}
+
 // Columns поля
 type Columns map[string]*Column
 
@@ -234,12 +284,13 @@ func (columns ObjectColumns) Append(objectSchema, objectName string, column *Col
 
 const selectColumns = `
 select columns.catalog, columns.object_schema, columns.object_name, columns.column_id, columns.column_name,
-    columns.column_description, columns.type_name, columns.max_length, columns.precision, columns.scale,
-    columns.collation_name, columns.is_nullable, columns.is_ansi_padded, columns.is_rowguidcol, columns.is_identity,
-    columns.seed_value, columns.increment_value, columns.is_computed, columns.computed_definition,
-    columns.is_filestream, columns.is_replicated, columns.is_non_sql_subscribed, columns.is_merge_published,
-    columns.is_dts_replicated, columns.is_xml_document, columns.default_object_definition, columns.is_sparse,
-    columns.is_column_set, columns.generated_always, columns.is_hidden, columns.is_masked
+    columns.column_description, columns.type_name, columns.type_schema, columns.is_user_defined_type,
+    columns.max_length, columns.precision, columns.scale, columns.collation_name, columns.is_nullable,
+    columns.is_ansi_padded, columns.is_rowguidcol, columns.is_identity,columns.seed_value, columns.increment_value,
+    columns.is_computed, columns.computed_definition, columns.is_filestream, columns.is_replicated,
+    columns.is_non_sql_subscribed, columns.is_merge_published, columns.is_dts_replicated, columns.is_xml_document,
+    columns.default_object_definition, columns.is_sparse, columns.is_column_set, columns.generated_always,
+    columns.is_hidden, columns.is_masked
 from (
     select
         [catalog] = db_name(),
@@ -250,6 +301,8 @@ from (
         [column_name] = columns.name,
         [column_description] = cast(sep.value as nvarchar(2048)),
         [type_name] = st.name,
+        [type_schema] = schema_name(st.schema_id),
+        [is_user_defined_type] = st.is_user_defined,
         [max_length] = iif(
             st.name in ('char', 'varchar', 'nchar', 'nvarchar', 'binary', 'varbinary'),
             iif(columns.max_length = -1, 'max', cast(columns.max_length as nvarchar(4))),
@@ -315,6 +368,8 @@ from (
         [column_name] = columns.name,
         [column_description] = cast(sep.value as nvarchar(2048)),
         [type_name] = st.name,
+        [type_schema] = schema_name(st.schema_id),
+        [is_user_defined_type] = st.is_user_defined,
         [max_length] = iif(
             st.name in ('char', 'varchar', 'nchar', 'nvarchar', 'binary', 'varbinary'),
             iif(columns.max_length = -1, 'max', cast(columns.max_length as nvarchar(4))),
