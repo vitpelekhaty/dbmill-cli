@@ -172,9 +172,6 @@ func (columns Columns) List() []*Column {
 	return list
 }
 
-// ByColumnID реализация sort.Interface для сортировки полей по идентификатору
-type ByColumnID []*Column
-
 // ObjectColumns поля объектов (таблиц, табличных типов) БД
 type ObjectColumns map[string]Columns
 

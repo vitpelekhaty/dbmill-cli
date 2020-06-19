@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/vitpelekhaty/dbmill-cli/internal/pkg/output"
 )
@@ -84,6 +86,41 @@ func (udt UserDefinedType) Collation() string {
 	return ""
 }
 
+// ParentType возвращает полное описание родительского типа
+func (udt UserDefinedType) ParentType() string {
+	var builder strings.Builder
+
+	builder.WriteString("[" + udt.ParentTypeName + "]")
+
+	openedParentheses := udt.HasMaxLength() || udt.HasPrecision()
+
+	if openedParentheses {
+		builder.WriteRune('(')
+	}
+
+	if udt.HasMaxLength() {
+		builder.WriteString(udt.MaxLength())
+	} else {
+		if udt.HasPrecision() {
+			precision := udt.Precision()
+			scale := udt.Scale()
+
+			builder.WriteString(strconv.Itoa(precision))
+
+			if scale > 0 {
+				builder.WriteString(", ")
+				builder.WriteString(strconv.Itoa(scale))
+			}
+		}
+	}
+
+	if openedParentheses {
+		builder.WriteRune(')')
+	}
+
+	return builder.String()
+}
+
 type UserDefinedTypes map[string]*UserDefinedType
 
 func (types UserDefinedTypes) append(udt *UserDefinedType) {
@@ -137,22 +174,17 @@ func (command *ScriptsFolderCommand) writeDataTypeDefinition(ctx context.Context
 	domain *UserDefinedType) (IDatabaseObject, error) {
 	const dataTypeDefinition = "CREATE TYPE %s FROM %s\nGO"
 
-	userTypeName := domain.SchemaAndName(true)
-	t := "[" + domain.ParentTypeName + "]"
+	var builder strings.Builder
 
-	if domain.HasMaxLength() {
-		t = fmt.Sprintf("%s(%s)", t, domain.MaxLength())
-	} else {
-		if domain.HasPrecision() {
-			t = fmt.Sprintf("%s(%d, %d)", t, domain.Precision(), domain.Scale())
-		}
-	}
+	userTypeName := domain.SchemaAndName(true)
+
+	builder.WriteString(domain.ParentType())
 
 	if !domain.IsNullable {
-		t = t + " NOT NULL"
+		builder.WriteString(" NOT NULL")
 	}
 
-	definition := fmt.Sprintf(dataTypeDefinition, userTypeName, t)
+	definition := fmt.Sprintf(dataTypeDefinition, userTypeName, builder.String())
 	object.SetDefinition([]byte(definition))
 
 	return object, nil
