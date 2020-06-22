@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	str "github.com/vitpelekhaty/dbmill-cli/internal/pkg/strings"
 )
 
 // ColumnOption опция поля таблицы/табличного типа
@@ -310,9 +312,7 @@ func (col Column) XMLSchemaCollection() string {
 
 // String возвращает определение поля
 func (col Column) String() string {
-	var builder strings.Builder
-
-	builder.WriteString("[" + col.Name + "]")
+	builder := str.NewBuilder("[" + col.Name + "]")
 
 	dataTypeDefinition := col.dataTypeDefinition()
 
@@ -330,7 +330,7 @@ func (col Column) String() string {
 }
 
 func (col Column) dataTypeDefinition() string {
-	var builder Builder
+	var builder str.Builder
 
 	if col.IsUserDefinedType {
 		if strings.Trim(col.TypeSchema, " ") != "" {
@@ -366,7 +366,7 @@ func (col Column) dataTypeDefinition() string {
 	}
 
 	if col.HasXMLSchemaCollection() {
-		builder.InsertSpace()
+		builder.WriteSpace()
 
 		if col.IsXMLDocument {
 			builder.WriteString("DOCUMENT")
@@ -374,7 +374,7 @@ func (col Column) dataTypeDefinition() string {
 			builder.WriteString("CONTENT")
 		}
 
-		builder.InsertSpace()
+		builder.WriteSpace()
 		builder.WriteString(col.XMLSchemaCollection())
 	}
 
@@ -403,7 +403,7 @@ func (col Column) computedColumnDefinition() string {
 }
 
 func (col Column) columnDefinitionForTable() string {
-	var builder Builder
+	var builder str.Builder
 
 	if col.IsFileStream {
 		builder.WriteString("FILESTREAM")
@@ -413,32 +413,32 @@ func (col Column) columnDefinitionForTable() string {
 		collation := col.Collation()
 
 		if collation != col.defaultCollation {
-			builder.InsertSpace()
+			builder.WriteSpace()
 			builder.WriteString("COLLATE " + collation)
 		}
 	}
 
 	if col.IsSparse {
-		builder.InsertSpace()
+		builder.WriteSpace()
 		builder.WriteString("SPARSE")
 	}
 
 	if col.HasMaskingFunction() {
 		maskedColumnOption := fmt.Sprintf(`MASKED WITH (FUNCTION = '%s')`, col.MaskingFunction())
 
-		builder.InsertSpace()
+		builder.WriteSpace()
 		builder.WriteString(maskedColumnOption)
 	}
 
 	if col.HasDefaultDefinition() {
 		defaultDefinition := fmt.Sprintf(`DEFAULT %s`, col.DefaultDefinition())
 
-		builder.InsertSpace()
+		builder.WriteSpace()
 		builder.WriteString(defaultDefinition)
 	}
 
 	if col.IsIdentity {
-		builder.InsertSpace()
+		builder.WriteSpace()
 		builder.WriteString("IDENTITY")
 
 		seed := col.IdentitySeedValue()
@@ -450,33 +450,33 @@ func (col Column) columnDefinitionForTable() string {
 		}
 
 		if !col.IsReplicated {
-			builder.InsertSpace()
+			builder.WriteSpace()
 			builder.WriteString("NOT FOR REPLICATION")
 		}
 	}
 
 	if col.HasGenerateAlwaysDefinition() {
-		builder.InsertSpace()
+		builder.WriteSpace()
 		builder.WriteString(col.GenerateAlwaysDefinition())
 
 		if col.IsHidden {
-			builder.InsertSpace()
+			builder.WriteSpace()
 			builder.WriteString(" HIDDEN")
 		}
 	}
 
 	if !col.IsNullable && !col.IsIdentity {
-		builder.InsertSpace()
+		builder.WriteSpace()
 		builder.WriteString("NOT NULL")
 	}
 
 	if col.IsRowGUIDCol {
-		builder.InsertSpace()
+		builder.WriteSpace()
 		builder.WriteString("ROWGUIDCOL")
 	}
 
 	if col.HasEncryption() {
-		builder.InsertSpace()
+		builder.WriteSpace()
 
 		encryptionOptions := fmt.Sprintf(`COLUMN_ENCRYPTION_KEY = %s, ENCRYPTION_TYPE = %s, ALGORITHM = '%s'`,
 			col.EncryptionKey(), col.EncryptionType(), col.EncryptionAlgorithm())

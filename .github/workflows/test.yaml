@@ -25,6 +25,8 @@ jobs:
       run: go test ./internal/pkg/output
     - name: Test internal package filter
       run: go test ./internal/pkg/filter
+    - name: Test internal package strings
+      run: go test ./internal/pkg/strings
     - name: Test commands
       run: go test ./cmd/commands
     - name: Test engine

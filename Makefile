@@ -36,7 +36,10 @@ test_output_pkg:
 test_filter_pkg:
 	${GOTEST} ${TIMEOUT} github.com/vitpelekhaty/dbmill-cli/internal/pkg/filter
 
-test_internal_packages: test_output_pkg test_filter_pkg
+test_strings_pkg:
+	${GOTEST} ${TIMEOUT} github.com/vitpelekhaty/dbmill-cli/internal/pkg/strings
+
+test_internal_packages: test_output_pkg test_filter_pkg test_strings_pkg
 
 test_commands:
 	${GOTEST} ${TIMEOUT} github.com/vitpelekhaty/dbmill-cli/cmd/commands
