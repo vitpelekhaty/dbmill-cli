@@ -149,94 +149,98 @@ func (reader *MetadataReader) ObjectColumns(ctx context.Context) (ObjectColumns,
 	columns := make(ObjectColumns)
 
 	var (
-		catalog                   string
-		schema                    string
-		objectName                string
-		columnID                  int
-		columnName                string
-		description               sql.NullString
-		typeName                  string
-		typeSchema                string
-		isUserDefinedType         bool
-		maxLength                 sql.NullString
-		precision                 sql.NullInt32
-		scale                     sql.NullInt32
-		collation                 sql.NullString
-		isNullable                bool
-		isANSIPadded              bool
-		isRowGUIDCol              bool
-		isIdentity                bool
-		seedValue                 sql.NullInt32
-		incValue                  sql.NullInt32
-		isComputed                bool
-		compute                   sql.NullString
-		isFileStream              bool
-		isReplicated              bool
-		isNonSQLSubscribed        bool
-		isMergePublished          bool
-		isDTSReplicated           bool
-		isXMLDocument             bool
-		def                       sql.NullString
-		isSparse                  bool
-		isColumnSet               bool
-		generateAlways            sql.NullString
-		isHidden                  bool
-		isMasked                  bool
-		maskingFunc               sql.NullString
-		encryptionKey             sql.NullString
-		encryptionKeyDatabaseName sql.NullString
-		encryptionAlgorithm       sql.NullString
-		encryptionType            sql.NullString
+		catalog                       string
+		schema                        string
+		objectName                    string
+		columnID                      int
+		columnName                    string
+		description                   sql.NullString
+		typeName                      string
+		typeSchema                    string
+		isUserDefinedType             bool
+		maxLength                     sql.NullString
+		precision                     sql.NullInt32
+		scale                         sql.NullInt32
+		collation                     sql.NullString
+		isNullable                    bool
+		isANSIPadded                  bool
+		isRowGUIDCol                  bool
+		isIdentity                    bool
+		seedValue                     sql.NullInt32
+		incValue                      sql.NullInt32
+		isComputed                    bool
+		compute                       sql.NullString
+		isFileStream                  bool
+		isReplicated                  bool
+		isNonSQLSubscribed            bool
+		isMergePublished              bool
+		isDTSReplicated               bool
+		isXMLDocument                 bool
+		xmlSchemaCollectionSchemaName sql.NullString
+		xmlSchemaCollectionName       sql.NullString
+		def                           sql.NullString
+		isSparse                      bool
+		isColumnSet                   bool
+		generateAlways                sql.NullString
+		isHidden                      bool
+		isMasked                      bool
+		maskingFunc                   sql.NullString
+		encryptionKey                 sql.NullString
+		encryptionKeyDatabaseName     sql.NullString
+		encryptionAlgorithm           sql.NullString
+		encryptionType                sql.NullString
 	)
 
 	for rows.Next() {
 		err = rows.Scan(&catalog, &schema, &objectName, &columnID, &columnName, &description, &typeName, &typeSchema,
 			&isUserDefinedType, &maxLength, &precision, &scale, &collation, &isNullable, &isANSIPadded, &isRowGUIDCol,
 			&isIdentity, &seedValue, &incValue, &isComputed, &compute, &isFileStream, &isReplicated,
-			&isNonSQLSubscribed, &isMergePublished, &isDTSReplicated, &isXMLDocument, &def, &isSparse, &isColumnSet,
-			&generateAlways, &isHidden, &isMasked, &maskingFunc, &encryptionKey, &encryptionType, &encryptionAlgorithm,
-			&encryptionKeyDatabaseName)
+			&isNonSQLSubscribed, &isMergePublished, &isDTSReplicated, &isXMLDocument, &xmlSchemaCollectionSchemaName,
+			&xmlSchemaCollectionName, &def, &isSparse, &isColumnSet, &generateAlways, &isHidden, &isMasked, &maskingFunc,
+			&encryptionKey, &encryptionType, &encryptionAlgorithm, &encryptionKeyDatabaseName)
 
 		if err != nil {
 			return nil, err
 		}
 
 		column := &Column{
-			ID:                        columnID,
-			Name:                      columnName,
-			description:               description,
-			TypeName:                  typeName,
-			TypeSchema:                typeSchema,
-			IsUserDefinedType:         isUserDefinedType,
-			maxLength:                 maxLength,
-			precision:                 precision,
-			scale:                     scale,
-			collation:                 collation,
-			IsNullable:                isNullable,
-			IsANSIPadded:              isANSIPadded,
-			IsRowGUIDCol:              isRowGUIDCol,
-			IsIdentity:                isIdentity,
-			identitySeedValue:         seedValue,
-			identityIncrementValue:    incValue,
-			isComputed:                isComputed,
-			compute:                   compute,
-			IsFileStream:              isFileStream,
-			IsReplicated:              isReplicated,
-			IsNonSQLSubscribed:        isNonSQLSubscribed,
-			IsMergePublished:          isMergePublished,
-			IsDTSReplicated:           isDTSReplicated,
-			IsXMLDocument:             isXMLDocument,
-			def:                       def,
-			IsSparse:                  isSparse,
-			IsColumnSet:               isColumnSet,
-			generateAlways:            generateAlways,
-			IsHidden:                  isHidden,
-			IsMasked:                  isMasked,
-			maskingFunction:           maskingFunc,
-			encryptionKey:             encryptionKey,
-			encryptionType:            encryptionType,
-			encryptionAlgorithm:       encryptionAlgorithm,
-			encryptionKeyDatabaseName: encryptionKeyDatabaseName,
+			ID:                            columnID,
+			Name:                          columnName,
+			description:                   description,
+			TypeName:                      typeName,
+			TypeSchema:                    typeSchema,
+			IsUserDefinedType:             isUserDefinedType,
+			maxLength:                     maxLength,
+			precision:                     precision,
+			scale:                         scale,
+			collation:                     collation,
+			IsNullable:                    isNullable,
+			IsANSIPadded:                  isANSIPadded,
+			IsRowGUIDCol:                  isRowGUIDCol,
+			IsIdentity:                    isIdentity,
+			identitySeedValue:             seedValue,
+			identityIncrementValue:        incValue,
+			isComputed:                    isComputed,
+			compute:                       compute,
+			IsFileStream:                  isFileStream,
+			IsReplicated:                  isReplicated,
+			IsNonSQLSubscribed:            isNonSQLSubscribed,
+			IsMergePublished:              isMergePublished,
+			IsDTSReplicated:               isDTSReplicated,
+			IsXMLDocument:                 isXMLDocument,
+			xmlSchemaCollectionSchemaName: xmlSchemaCollectionSchemaName,
+			xmlSchemaCollectionName:       xmlSchemaCollectionName,
+			def:                           def,
+			IsSparse:                      isSparse,
+			IsColumnSet:                   isColumnSet,
+			generateAlways:                generateAlways,
+			IsHidden:                      isHidden,
+			IsMasked:                      isMasked,
+			maskingFunction:               maskingFunc,
+			encryptionKey:                 encryptionKey,
+			encryptionType:                encryptionType,
+			encryptionAlgorithm:           encryptionAlgorithm,
+			encryptionKeyDatabaseName:     encryptionKeyDatabaseName,
 		}
 
 		err = columns.Append(schema, objectName, column)

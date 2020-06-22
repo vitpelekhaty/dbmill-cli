@@ -39,41 +39,43 @@ const (
 
 // Column поле таблицы/табличного типа
 type Column struct {
-	ID                        int
-	Name                      string
-	description               sql.NullString
-	TypeName                  string
-	TypeSchema                string
-	IsUserDefinedType         bool
-	maxLength                 sql.NullString
-	precision                 sql.NullInt32
-	scale                     sql.NullInt32
-	collation                 sql.NullString
-	IsNullable                bool
-	IsANSIPadded              bool
-	IsRowGUIDCol              bool
-	IsIdentity                bool
-	identitySeedValue         sql.NullInt32
-	identityIncrementValue    sql.NullInt32
-	isComputed                bool
-	compute                   sql.NullString
-	IsFileStream              bool
-	IsReplicated              bool
-	IsNonSQLSubscribed        bool
-	IsMergePublished          bool
-	IsDTSReplicated           bool
-	IsXMLDocument             bool
-	def                       sql.NullString
-	IsSparse                  bool
-	IsColumnSet               bool
-	generateAlways            sql.NullString
-	IsHidden                  bool
-	IsMasked                  bool
-	maskingFunction           sql.NullString
-	encryptionKey             sql.NullString
-	encryptionKeyDatabaseName sql.NullString
-	encryptionAlgorithm       sql.NullString
-	encryptionType            sql.NullString
+	ID                            int
+	Name                          string
+	description                   sql.NullString
+	TypeName                      string
+	TypeSchema                    string
+	IsUserDefinedType             bool
+	maxLength                     sql.NullString
+	precision                     sql.NullInt32
+	scale                         sql.NullInt32
+	collation                     sql.NullString
+	IsNullable                    bool
+	IsANSIPadded                  bool
+	IsRowGUIDCol                  bool
+	IsIdentity                    bool
+	identitySeedValue             sql.NullInt32
+	identityIncrementValue        sql.NullInt32
+	isComputed                    bool
+	compute                       sql.NullString
+	IsFileStream                  bool
+	IsReplicated                  bool
+	IsNonSQLSubscribed            bool
+	IsMergePublished              bool
+	IsDTSReplicated               bool
+	IsXMLDocument                 bool
+	xmlSchemaCollectionSchemaName sql.NullString
+	xmlSchemaCollectionName       sql.NullString
+	def                           sql.NullString
+	IsSparse                      bool
+	IsColumnSet                   bool
+	generateAlways                sql.NullString
+	IsHidden                      bool
+	IsMasked                      bool
+	maskingFunction               sql.NullString
+	encryptionKey                 sql.NullString
+	encryptionKeyDatabaseName     sql.NullString
+	encryptionAlgorithm           sql.NullString
+	encryptionType                sql.NullString
 
 	defaultCollation string
 	owner            ColumnOwner
@@ -279,6 +281,33 @@ func (col Column) EncryptionDatabaseName() string {
 	return ""
 }
 
+// HasXMLSchemaCollection
+func (col Column) HasXMLSchemaCollection() bool {
+	return strings.EqualFold(col.TypeName, "xml") && col.xmlSchemaCollectionName.Valid
+}
+
+// XMLSchemaCollection
+func (col Column) XMLSchemaCollection() string {
+	if col.HasXMLSchemaCollection() {
+		var (
+			schema string
+			name   string
+		)
+
+		if col.xmlSchemaCollectionSchemaName.Valid {
+			schema = col.xmlSchemaCollectionSchemaName.String
+		}
+
+		if col.xmlSchemaCollectionName.Valid {
+			name = col.xmlSchemaCollectionName.String
+		}
+
+		return SchemaAndObject(schema, name, true)
+	}
+
+	return ""
+}
+
 // String возвращает определение поля
 func (col Column) String() string {
 	var builder strings.Builder
@@ -301,7 +330,7 @@ func (col Column) String() string {
 }
 
 func (col Column) dataTypeDefinition() string {
-	var builder strings.Builder
+	var builder Builder
 
 	if col.IsUserDefinedType {
 		if strings.Trim(col.TypeSchema, " ") != "" {
@@ -334,6 +363,19 @@ func (col Column) dataTypeDefinition() string {
 
 	if openedParentheses {
 		builder.WriteRune(')')
+	}
+
+	if col.HasXMLSchemaCollection() {
+		builder.InsertSpace()
+
+		if col.IsXMLDocument {
+			builder.WriteString("DOCUMENT")
+		} else {
+			builder.WriteString("CONTENT")
+		}
+
+		builder.InsertSpace()
+		builder.WriteString(col.XMLSchemaCollection())
 	}
 
 	return builder.String()
@@ -519,9 +561,10 @@ select columns.catalog, columns.object_schema, columns.object_name, columns.colu
     columns.is_ansi_padded, columns.is_rowguidcol, columns.is_identity,columns.seed_value, columns.increment_value,
     columns.is_computed, columns.computed_definition, columns.is_filestream, columns.is_replicated,
     columns.is_non_sql_subscribed, columns.is_merge_published, columns.is_dts_replicated, columns.is_xml_document,
-    columns.default_object_definition, columns.is_sparse, columns.is_column_set, columns.generated_always,
-    columns.is_hidden, columns.is_masked, columns.masking_function, columns.encryption_key, columns.encryption_type,
-    columns.encryption_algorithm, columns.encryption_key_database_name
+    columns.xml_schema_collection_schema, columns.xml_schema_collection_name, columns.default_object_definition,
+    columns.is_sparse, columns.is_column_set, columns.generated_always, columns.is_hidden, columns.is_masked,
+    columns.masking_function, columns.encryption_key, columns.encryption_type, columns.encryption_algorithm,
+    columns.encryption_key_database_name
 from (
     select
         [catalog] = db_name(),
@@ -566,6 +609,8 @@ from (
         [is_merge_published] = columns.is_merge_published,
         [is_dts_replicated] = columns.is_dts_replicated,
         [is_xml_document] = columns.is_xml_document,
+        [xml_schema_collection_schema] = schema_name(xsc.schema_id),
+        [xml_schema_collection_name] = xsc.name,
         [default_object_definition] = def.definition,
         [is_sparse] = columns.is_sparse,
         [is_column_set] = columns.is_column_set,
@@ -601,6 +646,7 @@ from (
                     and (columns.column_id = sep.minor_id) and (sep.name = 'MS_Description')
                     and (sep.class = 1)
                 left join sys.column_encryption_keys as cek on (columns.column_encryption_key_id = cek.column_encryption_key_id)
+                left join sys.xml_schema_collections as xsc on (columns.xml_collection_id = xsc.xml_collection_id)
     where types.is_user_defined != cast(0 as bit) and types.is_assembly_type != cast(1 as bit)
     union
     select
@@ -646,6 +692,8 @@ from (
         [is_merge_published] = columns.is_merge_published,
         [is_dts_replicated] = columns.is_dts_replicated,
         [is_xml_document] = columns.is_xml_document,
+        [xml_schema_collection_schema] = schema_name(xsc.schema_id),
+        [xml_schema_collection_name] = xsc.name,
         [default_object_definition] = def.definition,
         [is_sparse] = columns.is_sparse,
         [is_column_set] = columns.is_column_set,
@@ -681,6 +729,7 @@ from (
                     and (columns.column_id = sep.minor_id) and (sep.name = 'MS_Description')
                     and (sep.class = 1)
                 left join sys.column_encryption_keys as cek on (columns.column_encryption_key_id = cek.column_encryption_key_id)
+                left join sys.xml_schema_collections as xsc on (columns.xml_collection_id = xsc.xml_collection_id)
     where tables.type = 'U'
 ) as columns
 order by columns.catalog, columns.object_schema, columns.object_name, columns.column_id
