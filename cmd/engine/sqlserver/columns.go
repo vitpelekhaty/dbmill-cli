@@ -9,48 +9,74 @@ import (
 )
 
 // ColumnOption опция поля таблицы/табличного типа
-type ColumnOption func(col Column)
+type ColumnOption func(col *Column)
 
 // WithDefaultCollation collation по умолчанию
 func WithDefaultCollation(collation string) ColumnOption {
-	return func(col Column) {
+	return func(col *Column) {
 		col.defaultCollation = collation
 	}
 }
 
+// WithColumnOwner владелец поля (по умолчанию - ColumnOwnerTable)
+func WithColumnOwner(owner ColumnOwner) ColumnOption {
+	return func(col *Column) {
+		col.owner = owner
+	}
+}
+
+// ColumnOwner владелец поля
+type ColumnOwner byte
+
+const (
+	// ColumnOwnerTable владелец поля - таблица
+	ColumnOwnerTable ColumnOwner = iota
+	// ColumnOwnerMemoryOptimizedTable владелец поля - memory-optimized таблица
+	ColumnOwnerMemoryOptimizedTable
+	// ColumnOwnerUserDefinedTableDataType владелец поля - пользовательский табличный тип
+	ColumnOwnerUserDefinedTableDataType
+)
+
 // Column поле таблицы/табличного типа
 type Column struct {
-	ID                     int
-	Name                   string
-	description            sql.NullString
-	TypeName               string
-	TypeSchema             string
-	IsUserDefinedType      bool
-	maxLength              sql.NullString
-	precision              sql.NullInt32
-	scale                  sql.NullInt32
-	collation              sql.NullString
-	defaultCollation       string
-	IsNullable             bool
-	IsANSIPadded           bool
-	IsRowGUIDCol           bool
-	IsIdentity             bool
-	identitySeedValue      sql.NullInt32
-	identityIncrementValue sql.NullInt32
-	isComputed             bool
-	compute                sql.NullString
-	IsFileStream           bool
-	IsReplicated           bool
-	IsNonSQLSubscribed     bool
-	IsMergePublished       bool
-	IsDTSReplicated        bool
-	IsXMLDocument          bool
-	def                    sql.NullString
-	IsSparse               bool
-	IsColumnSet            bool
-	generateAlways         sql.NullString
-	IsHidden               bool
-	IsMasked               bool
+	ID                        int
+	Name                      string
+	description               sql.NullString
+	TypeName                  string
+	TypeSchema                string
+	IsUserDefinedType         bool
+	maxLength                 sql.NullString
+	precision                 sql.NullInt32
+	scale                     sql.NullInt32
+	collation                 sql.NullString
+	IsNullable                bool
+	IsANSIPadded              bool
+	IsRowGUIDCol              bool
+	IsIdentity                bool
+	identitySeedValue         sql.NullInt32
+	identityIncrementValue    sql.NullInt32
+	isComputed                bool
+	compute                   sql.NullString
+	IsFileStream              bool
+	IsReplicated              bool
+	IsNonSQLSubscribed        bool
+	IsMergePublished          bool
+	IsDTSReplicated           bool
+	IsXMLDocument             bool
+	def                       sql.NullString
+	IsSparse                  bool
+	IsColumnSet               bool
+	generateAlways            sql.NullString
+	IsHidden                  bool
+	IsMasked                  bool
+	maskingFunction           sql.NullString
+	encryptionKey             sql.NullString
+	encryptionKeyDatabaseName sql.NullString
+	encryptionAlgorithm       sql.NullString
+	encryptionType            sql.NullString
+
+	defaultCollation string
+	owner            ColumnOwner
 }
 
 // HasMaxLength проверяет, указана ли максимальная длина (в байтах) для типа
@@ -193,11 +219,89 @@ func (col Column) IdentityIncrementValue() int {
 	return 1
 }
 
+// HasMaskingFunction проверяет наличие masking function
+func (col Column) HasMaskingFunction() bool {
+	return col.IsMasked && col.maskingFunction.Valid
+}
+
+// MaskingFunction
+func (col Column) MaskingFunction() string {
+	if col.HasMaskingFunction() {
+		return col.maskingFunction.String
+	}
+
+	return ""
+}
+
+// HasEncryption
+func (col Column) HasEncryption() bool {
+	return col.encryptionKey.Valid && col.encryptionType.Valid && col.encryptionAlgorithm.Valid
+}
+
+// EncryptionKey
+func (col Column) EncryptionKey() string {
+	if col.HasEncryption() {
+		return col.encryptionKey.String
+	}
+
+	return ""
+}
+
+// EncryptionType
+func (col Column) EncryptionType() string {
+	if col.HasEncryption() {
+		return col.encryptionType.String
+	}
+
+	return ""
+}
+
+// EncryptionAlgorithm
+func (col Column) EncryptionAlgorithm() string {
+	if col.HasEncryption() {
+		return col.encryptionAlgorithm.String
+	}
+
+	return ""
+}
+
+// HasEncryptionDatabaseName
+func (col Column) HasEncryptionDatabaseName() bool {
+	return col.HasEncryption() && col.encryptionKeyDatabaseName.Valid
+}
+
+// EncryptionDatabaseName
+func (col Column) EncryptionDatabaseName() string {
+	if col.HasEncryptionDatabaseName() {
+		return col.encryptionKeyDatabaseName.String
+	}
+
+	return ""
+}
+
 // String возвращает определение поля
 func (col Column) String() string {
 	var builder strings.Builder
 
-	builder.WriteString("[" + col.Name + "] ")
+	builder.WriteString("[" + col.Name + "]")
+
+	dataTypeDefinition := col.dataTypeDefinition()
+
+	if strings.Trim(dataTypeDefinition, " ") != "" {
+		builder.WriteString(" " + dataTypeDefinition)
+	}
+
+	columnDefinition := col.columnDefinition()
+
+	if strings.Trim(columnDefinition, " ") != "" {
+		builder.WriteString(" " + columnDefinition)
+	}
+
+	return builder.String()
+}
+
+func (col Column) dataTypeDefinition() string {
+	var builder strings.Builder
 
 	if col.IsUserDefinedType {
 		if strings.Trim(col.TypeSchema, " ") != "" {
@@ -223,8 +327,7 @@ func (col Column) String() string {
 			builder.WriteString(strconv.Itoa(precision))
 
 			if scale > 0 {
-				builder.WriteString(", ")
-				builder.WriteString(strconv.Itoa(scale))
+				builder.WriteString(", " + strconv.Itoa(scale))
 			}
 		}
 	}
@@ -233,15 +336,124 @@ func (col Column) String() string {
 		builder.WriteRune(')')
 	}
 
-	if !col.IsNullable {
-		builder.WriteString(" NOT NULL")
+	return builder.String()
+}
+
+func (col Column) columnDefinition() string {
+	if col.isComputed {
+		return col.computedColumnDefinition()
+	}
+
+	switch col.owner {
+	case ColumnOwnerTable:
+		return col.columnDefinitionForTable()
+	case ColumnOwnerMemoryOptimizedTable:
+		return col.columnDefinitionForMemoryOptimizedTable()
+	case ColumnOwnerUserDefinedTableDataType:
+		return col.columnDefinitionForUserDefinedTableType()
+	default:
+		return ""
+	}
+}
+
+func (col Column) computedColumnDefinition() string {
+	return ""
+}
+
+func (col Column) columnDefinitionForTable() string {
+	var builder Builder
+
+	if col.IsFileStream {
+		builder.WriteString("FILESTREAM")
+	}
+
+	if col.HasCollation() {
+		collation := col.Collation()
+
+		if collation != col.defaultCollation {
+			builder.InsertSpace()
+			builder.WriteString("COLLATE " + collation)
+		}
+	}
+
+	if col.IsSparse {
+		builder.InsertSpace()
+		builder.WriteString("SPARSE")
+	}
+
+	if col.HasMaskingFunction() {
+		maskedColumnOption := fmt.Sprintf(`MASKED WITH (FUNCTION = '%s')`, col.MaskingFunction())
+
+		builder.InsertSpace()
+		builder.WriteString(maskedColumnOption)
+	}
+
+	if col.HasDefaultDefinition() {
+		defaultDefinition := fmt.Sprintf(`DEFAULT %s`, col.DefaultDefinition())
+
+		builder.InsertSpace()
+		builder.WriteString(defaultDefinition)
+	}
+
+	if col.IsIdentity {
+		builder.InsertSpace()
+		builder.WriteString("IDENTITY")
+
+		seed := col.IdentitySeedValue()
+		increment := col.IdentityIncrementValue()
+
+		if seed > 1 || increment > 1 {
+			identityValues := fmt.Sprintf("(%d, %d)", seed, increment)
+			builder.WriteString(identityValues)
+		}
+
+		if !col.IsReplicated {
+			builder.InsertSpace()
+			builder.WriteString("NOT FOR REPLICATION")
+		}
+	}
+
+	if col.HasGenerateAlwaysDefinition() {
+		builder.InsertSpace()
+		builder.WriteString(col.GenerateAlwaysDefinition())
+
+		if col.IsHidden {
+			builder.InsertSpace()
+			builder.WriteString(" HIDDEN")
+		}
+	}
+
+	if !col.IsNullable && !col.IsIdentity {
+		builder.InsertSpace()
+		builder.WriteString("NOT NULL")
+	}
+
+	if col.IsRowGUIDCol {
+		builder.InsertSpace()
+		builder.WriteString("ROWGUIDCOL")
+	}
+
+	if col.HasEncryption() {
+		builder.InsertSpace()
+
+		encryptionOptions := fmt.Sprintf(`COLUMN_ENCRYPTION_KEY = %s, ENCRYPTION_TYPE = %s, ALGORITHM = '%s'`,
+			col.EncryptionKey(), col.EncryptionType(), col.EncryptionAlgorithm())
+		builder.WriteString("ENCRYPTED WITH (" + encryptionOptions + ")")
 	}
 
 	return builder.String()
 }
 
+func (col Column) columnDefinitionForMemoryOptimizedTable() string {
+	return ""
+}
+
+func (col Column) columnDefinitionForUserDefinedTableType() string {
+	return ""
+}
+
 // SetOptions устанавливает дополнительные опции поля таблицы/табличного типа
-func (col Column) SetOptions(options ...ColumnOption) {
+func (col *Column) SetOptions(options ...ColumnOption) {
 	for _, option := range options {
 		option(col)
 	}
@@ -308,7 +520,8 @@ select columns.catalog, columns.object_schema, columns.object_name, columns.colu
     columns.is_computed, columns.computed_definition, columns.is_filestream, columns.is_replicated,
     columns.is_non_sql_subscribed, columns.is_merge_published, columns.is_dts_replicated, columns.is_xml_document,
     columns.default_object_definition, columns.is_sparse, columns.is_column_set, columns.generated_always,
-    columns.is_hidden, columns.is_masked
+    columns.is_hidden, columns.is_masked, columns.masking_function, columns.encryption_key, columns.encryption_type,
+    columns.encryption_algorithm, columns.encryption_key_database_name
 from (
     select
         [catalog] = db_name(),
@@ -362,7 +575,17 @@ from (
             else null
         end,
         [is_hidden] = columns.is_hidden,
-        [is_masked] = columns.is_masked
+        [is_masked] = columns.is_masked,
+        [masking_function] = mc.masking_function,
+        [encryption_key] = cek.name,
+        [encryption_type] = case columns.encryption_type
+            when 1 then N'DETERMINISTIC'
+            when 2 then N'RANDOMIZED'
+            else ''
+        end,
+        [encryption_algorithm] = columns.encryption_algorithm_name,
+        [encryption_key_database_name] = columns.column_encryption_key_database_name
+
     from sys.table_types as types
         inner join sys.objects as objects on (types.type_table_object_id = objects.object_id)
             inner join sys.columns as columns on (objects.object_id = columns.object_id)
@@ -372,9 +595,12 @@ from (
                     and (columns.column_id = cc.column_id)
                 left join sys.identity_columns as ident on (columns.object_id = ident.object_id)
                     and (columns.column_id = ident.column_id)
+                left join sys.masked_columns as mc on (columns.object_id = mc.object_id)
+                    and (columns.column_id = mc.column_id) and (mc.is_masked != cast(0 as bit))
                 left join sys.extended_properties as sep on (columns.object_id = sep.major_id)
                     and (columns.column_id = sep.minor_id) and (sep.name = 'MS_Description')
                     and (sep.class = 1)
+                left join sys.column_encryption_keys as cek on (columns.column_encryption_key_id = cek.column_encryption_key_id)
     where types.is_user_defined != cast(0 as bit) and types.is_assembly_type != cast(1 as bit)
     union
     select
@@ -429,7 +655,17 @@ from (
             else null
         end,
         [is_hidden] = columns.is_hidden,
-        [is_masked] = columns.is_masked
+        [is_masked] = columns.is_masked,
+        [masking_function] = mc.masking_function,
+        [encryption_key] = cek.name,
+        [encryption_type] = case columns.encryption_type
+            when 1 then N'DETERMINISTIC'
+            when 2 then N'RANDOMIZED'
+            else ''
+        end,
+        [encryption_algorithm] = columns.encryption_algorithm_name,
+        [encryption_key_database_name] = columns.column_encryption_key_database_name
+
     from sys.tables as tables
         inner join sys.objects as objects on (tables.object_id = objects.object_id)
             inner join sys.columns as columns on (objects.object_id = columns.object_id)
@@ -439,9 +675,12 @@ from (
                     and (columns.column_id = cc.column_id)
                 left join sys.identity_columns as ident on (columns.object_id = ident.object_id)
                     and (columns.column_id = ident.column_id)
+                left join sys.masked_columns as mc on (columns.object_id = mc.object_id)
+                    and (columns.column_id = mc.column_id) and (mc.is_masked != cast(0 as bit))
                 left join sys.extended_properties as sep on (columns.object_id = sep.major_id)
                     and (columns.column_id = sep.minor_id) and (sep.name = 'MS_Description')
                     and (sep.class = 1)
+                left join sys.column_encryption_keys as cek on (columns.column_encryption_key_id = cek.column_encryption_key_id)
     where tables.type = 'U'
 ) as columns
 order by columns.catalog, columns.object_schema, columns.object_name, columns.column_id

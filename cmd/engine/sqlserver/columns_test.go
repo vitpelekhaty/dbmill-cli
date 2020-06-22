@@ -37,6 +37,25 @@ func TestColumn_String(t *testing.T) {
 				IsANSIPadded: true,
 			},
 			options: nil,
+			want:    "[value] [nvarchar](2048) COLLATE SQL_Latin1_General_CP1_CI_AS",
+		},
+		{
+			column: Column{
+				ID:       2,
+				Name:     "value",
+				TypeName: "nvarchar",
+				maxLength: sql.NullString{
+					String: "2048",
+					Valid:  true,
+				},
+				collation: sql.NullString{
+					String: "SQL_Latin1_General_CP1_CI_AS",
+					Valid:  true,
+				},
+				IsNullable:   true,
+				IsANSIPadded: true,
+			},
+			options: []ColumnOption{WithDefaultCollation("SQL_Latin1_General_CP1_CI_AS")},
 			want:    "[value] [nvarchar](2048)",
 		},
 	}
