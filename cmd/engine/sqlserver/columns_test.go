@@ -7,31 +7,18 @@ import (
 
 func TestColumn_String(t *testing.T) {
 	var cases = []struct {
-		column Column
-		want   string
+		column  Column
+		options []ColumnOption
+		want    string
 	}{
 		{
 			column: Column{
-				ID:                 1,
-				Name:               "key",
-				TypeName:           "int",
-				IsNullable:         false,
-				IsANSIPadded:       false,
-				IsRowGUIDCol:       false,
-				IsIdentity:         false,
-				isComputed:         false,
-				IsFileStream:       false,
-				IsReplicated:       false,
-				IsNonSQLSubscribed: false,
-				IsMergePublished:   false,
-				IsDTSReplicated:    false,
-				IsXMLDocument:      false,
-				IsSparse:           false,
-				IsColumnSet:        false,
-				IsHidden:           false,
-				IsMasked:           false,
+				ID:       1,
+				Name:     "key",
+				TypeName: "int",
 			},
-			want: "[key] [int] NOT NULL",
+			options: nil,
+			want:    "[key] [int] NOT NULL",
 		},
 		{
 			column: Column{
@@ -46,29 +33,21 @@ func TestColumn_String(t *testing.T) {
 					String: "SQL_Latin1_General_CP1_CI_AS",
 					Valid:  true,
 				},
-				IsNullable:         true,
-				IsANSIPadded:       true,
-				IsRowGUIDCol:       false,
-				IsIdentity:         false,
-				isComputed:         false,
-				IsFileStream:       false,
-				IsReplicated:       false,
-				IsNonSQLSubscribed: false,
-				IsMergePublished:   false,
-				IsDTSReplicated:    false,
-				IsXMLDocument:      false,
-				IsSparse:           false,
-				IsColumnSet:        false,
-				IsHidden:           false,
-				IsMasked:           false,
+				IsNullable:   true,
+				IsANSIPadded: true,
 			},
-			want: "[value] [nvarchar](2048)",
+			options: nil,
+			want:    "[value] [nvarchar](2048)",
 		},
 	}
 
 	var have string
 
 	for _, test := range cases {
+		if len(test.options) > 0 {
+			test.column.SetOptions(test.options...)
+		}
+
 		have = test.column.String()
 
 		if have != test.want {

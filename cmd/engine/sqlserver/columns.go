@@ -8,6 +8,16 @@ import (
 	"strings"
 )
 
+// ColumnOption опция поля таблицы/табличного типа
+type ColumnOption func(col Column)
+
+// WithDefaultCollation collation по умолчанию
+func WithDefaultCollation(collation string) ColumnOption {
+	return func(col Column) {
+		col.defaultCollation = collation
+	}
+}
+
 // Column поле таблицы/табличного типа
 type Column struct {
 	ID                     int
@@ -20,6 +30,7 @@ type Column struct {
 	precision              sql.NullInt32
 	scale                  sql.NullInt32
 	collation              sql.NullString
+	defaultCollation       string
 	IsNullable             bool
 	IsANSIPadded           bool
 	IsRowGUIDCol           bool
@@ -227,6 +238,13 @@ func (col Column) String() string {
 	}
 
 	return builder.String()
+}
+
+// SetOptions устанавливает дополнительные опции поля таблицы/табличного типа
+func (col Column) SetOptions(options ...ColumnOption) {
+	for _, option := range options {
+		option(col)
+	}
 }
 
 // Columns поля
