@@ -68,7 +68,8 @@ type Column struct {
 	IsXMLDocument                 bool
 	xmlSchemaCollectionSchemaName sql.NullString
 	xmlSchemaCollectionName       sql.NullString
-	def                           sql.NullString
+	defaultConstraint             sql.NullString
+	defaultConstraintDefinition   sql.NullString
 	IsSparse                      bool
 	IsColumnSet                   bool
 	generateAlways                sql.NullString
@@ -154,15 +155,24 @@ func (col Column) ComputeDefinition() string {
 	return ""
 }
 
-// HasDefaultDefinition проверяет, есть ли определение значения поля по умолчанию
-func (col Column) HasDefaultDefinition() bool {
-	return col.def.Valid
+// HasDefaultConstraintDefinition проверяет, есть ли определение значения поля по умолчанию
+func (col Column) HasDefaultConstraintDefinition() bool {
+	return col.defaultConstraint.Valid && col.defaultConstraintDefinition.Valid
 }
 
-// DefaultDefinition возвращает определение значения поля по умолчанию
-func (col Column) DefaultDefinition() string {
-	if col.def.Valid {
-		return col.def.String
+// DefaultConstraintDefinition возвращает определение значения поля по умолчанию
+func (col Column) DefaultConstraintDefinition() string {
+	if col.HasDefaultConstraintDefinition() {
+		return col.defaultConstraintDefinition.String
+	}
+
+	return ""
+}
+
+// DefaultConstraintName возвращает имя default constraint
+func (col Column) DefaultConstraintName() string {
+	if col.HasDefaultConstraintDefinition() {
+		return col.defaultConstraint.String
 	}
 
 	return ""
@@ -440,8 +450,9 @@ func (col Column) columnDefinitionForTable() string {
 		builder.WriteString(maskedColumnOption)
 	}
 
-	if col.HasDefaultDefinition() {
-		defaultDefinition := fmt.Sprintf(`DEFAULT %s`, col.DefaultDefinition())
+	if col.HasDefaultConstraintDefinition() {
+		defaultDefinition := fmt.Sprintf(`CONSTRAINT [%s] DEFAULT %s`, col.DefaultConstraintName(),
+			col.DefaultConstraintDefinition())
 
 		builder.WriteSpace()
 		builder.WriteString(defaultDefinition)
@@ -518,8 +529,9 @@ func (col Column) columnDefinitionForUserDefinedTableType() string {
 		builder.WriteString("NOT NULL")
 	}
 
-	if col.HasDefaultDefinition() {
-		defaultDefinition := fmt.Sprintf(`DEFAULT %s`, col.DefaultDefinition())
+	if col.HasDefaultConstraintDefinition() {
+		defaultDefinition := fmt.Sprintf(`CONSTRAINT [%s] DEFAULT %s`, col.DefaultConstraintName(),
+			col.DefaultConstraintDefinition())
 
 		builder.WriteSpace()
 		builder.WriteString(defaultDefinition)
@@ -622,10 +634,10 @@ select columns.catalog, columns.object_schema, columns.object_name, columns.colu
     columns.is_ansi_padded, columns.is_rowguidcol, columns.is_identity,columns.seed_value, columns.increment_value,
     columns.is_computed, columns.is_persisted, columns.computed_definition, columns.is_filestream, columns.is_replicated,
     columns.is_non_sql_subscribed, columns.is_merge_published, columns.is_dts_replicated, columns.is_xml_document,
-    columns.xml_schema_collection_schema, columns.xml_schema_collection_name, columns.default_object_definition,
-    columns.is_sparse, columns.is_column_set, columns.generated_always, columns.is_hidden, columns.is_masked,
-    columns.masking_function, columns.encryption_key, columns.encryption_type, columns.encryption_algorithm,
-    columns.encryption_key_database_name
+    columns.xml_schema_collection_schema, columns.xml_schema_collection_name, columns.default_constraint,
+    columns.default_object_definition, columns.is_sparse, columns.is_column_set, columns.generated_always,
+    columns.is_hidden, columns.is_masked, columns.masking_function, columns.encryption_key, columns.encryption_type,
+    columns.encryption_algorithm, columns.encryption_key_database_name
 from (
     select
         [catalog] = db_name(),
@@ -673,7 +685,8 @@ from (
         [is_xml_document] = columns.is_xml_document,
         [xml_schema_collection_schema] = schema_name(xsc.schema_id),
         [xml_schema_collection_name] = xsc.name,
-        [default_object_definition] = def.definition,
+        [default_constraint] = defaultConstraintDefinition.name,
+        [default_object_definition] = defaultConstraintDefinition.definition,
         [is_sparse] = columns.is_sparse,
         [is_column_set] = columns.is_column_set,
         [generated_always] = case columns.generated_always_type
@@ -697,7 +710,7 @@ from (
         inner join sys.objects as objects on (o.object_id = objects.object_id)
             inner join sys.columns as columns on (objects.object_id = columns.object_id)
                 inner join sys.types as st on (columns.user_type_id = st.user_type_id)
-                left join sys.default_constraints as def on (columns.default_object_id = def.object_id)
+                left join sys.default_constraints as defaultConstraintDefinition on (columns.default_object_id = defaultConstraintDefinition.object_id)
                 left join sys.computed_columns as cc on (columns.object_id = cc.object_id)
                     and (columns.column_id = cc.column_id)
                 left join sys.identity_columns as ident on (columns.object_id = ident.object_id)

@@ -179,6 +179,7 @@ func (reader *MetadataReader) ObjectColumns(ctx context.Context) (ObjectColumns,
 		isXMLDocument                 bool
 		xmlSchemaCollectionSchemaName sql.NullString
 		xmlSchemaCollectionName       sql.NullString
+		defaultConstraint             sql.NullString
 		def                           sql.NullString
 		isSparse                      bool
 		isColumnSet                   bool
@@ -197,8 +198,8 @@ func (reader *MetadataReader) ObjectColumns(ctx context.Context) (ObjectColumns,
 			&isUserDefinedType, &maxLength, &precision, &scale, &collation, &isNullable, &isANSIPadded, &isRowGUIDCol,
 			&isIdentity, &seedValue, &incValue, &isComputed, &isPersisted, &compute, &isFileStream, &isReplicated,
 			&isNonSQLSubscribed, &isMergePublished, &isDTSReplicated, &isXMLDocument, &xmlSchemaCollectionSchemaName,
-			&xmlSchemaCollectionName, &def, &isSparse, &isColumnSet, &generateAlways, &isHidden, &isMasked, &maskingFunc,
-			&encryptionKey, &encryptionType, &encryptionAlgorithm, &encryptionKeyDatabaseName)
+			&xmlSchemaCollectionName, &defaultConstraint, &def, &isSparse, &isColumnSet, &generateAlways, &isHidden,
+			&isMasked, &maskingFunc, &encryptionKey, &encryptionType, &encryptionAlgorithm, &encryptionKeyDatabaseName)
 
 		if err != nil {
 			return nil, err
@@ -232,7 +233,8 @@ func (reader *MetadataReader) ObjectColumns(ctx context.Context) (ObjectColumns,
 			IsXMLDocument:                 isXMLDocument,
 			xmlSchemaCollectionSchemaName: xmlSchemaCollectionSchemaName,
 			xmlSchemaCollectionName:       xmlSchemaCollectionName,
-			def:                           def,
+			defaultConstraint:             defaultConstraint,
+			defaultConstraintDefinition:   def,
 			IsSparse:                      isSparse,
 			IsColumnSet:                   isColumnSet,
 			generateAlways:                generateAlways,
