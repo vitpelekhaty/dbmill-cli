@@ -169,6 +169,7 @@ func (reader *MetadataReader) ObjectColumns(ctx context.Context) (ObjectColumns,
 		seedValue                     sql.NullInt32
 		incValue                      sql.NullInt32
 		isComputed                    bool
+		isPersisted                   sql.NullBool
 		compute                       sql.NullString
 		isFileStream                  bool
 		isReplicated                  bool
@@ -194,7 +195,7 @@ func (reader *MetadataReader) ObjectColumns(ctx context.Context) (ObjectColumns,
 	for rows.Next() {
 		err = rows.Scan(&catalog, &schema, &objectName, &columnID, &columnName, &description, &typeName, &typeSchema,
 			&isUserDefinedType, &maxLength, &precision, &scale, &collation, &isNullable, &isANSIPadded, &isRowGUIDCol,
-			&isIdentity, &seedValue, &incValue, &isComputed, &compute, &isFileStream, &isReplicated,
+			&isIdentity, &seedValue, &incValue, &isComputed, &isPersisted, &compute, &isFileStream, &isReplicated,
 			&isNonSQLSubscribed, &isMergePublished, &isDTSReplicated, &isXMLDocument, &xmlSchemaCollectionSchemaName,
 			&xmlSchemaCollectionName, &def, &isSparse, &isColumnSet, &generateAlways, &isHidden, &isMasked, &maskingFunc,
 			&encryptionKey, &encryptionType, &encryptionAlgorithm, &encryptionKeyDatabaseName)
@@ -221,6 +222,7 @@ func (reader *MetadataReader) ObjectColumns(ctx context.Context) (ObjectColumns,
 			identitySeedValue:             seedValue,
 			identityIncrementValue:        incValue,
 			isComputed:                    isComputed,
+			isPersisted:                   isPersisted,
 			compute:                       compute,
 			IsFileStream:                  isFileStream,
 			IsReplicated:                  isReplicated,
