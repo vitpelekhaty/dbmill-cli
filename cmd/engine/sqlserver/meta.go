@@ -256,3 +256,20 @@ func (reader *MetadataReader) ObjectColumns(ctx context.Context) (ObjectColumns,
 
 	return columns, nil
 }
+
+// DatabaseCollation возвращает collation базы данных
+func (meta *MetadataReader) DatabaseCollation(ctx context.Context) (string, error) {
+	stmt, err := meta.db.PrepareContext(ctx, selectDatabaseCollation)
+
+	if err != nil {
+		return "", nil
+	}
+
+	defer stmt.Close()
+
+	var collation string
+
+	err = stmt.QueryRowContext(ctx).Scan(&collation)
+
+	return collation, err
+}

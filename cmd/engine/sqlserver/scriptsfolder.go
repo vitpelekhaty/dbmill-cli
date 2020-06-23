@@ -24,9 +24,10 @@ type ScriptsFolderCommand struct {
 	definitionCallback commands.ObjectDefinitionCallback
 	metaReader         *MetadataReader
 
-	userDefinedTypes UserDefinedTypes
-	permissions      ObjectPermissions
-	columns          ObjectColumns
+	userDefinedTypes  UserDefinedTypes
+	permissions       ObjectPermissions
+	columns           ObjectColumns
+	databaseCollation string
 }
 
 // NewScriptsFolderCommand конструктор ScriptsFolderCommand
@@ -44,9 +45,10 @@ func NewScriptsFolderCommand(engine *Engine, options ...commands.ScriptsFolderOp
 		definitionCallback: nil,
 		metaReader:         metaReader,
 
-		permissions:      nil,
-		userDefinedTypes: nil,
-		columns:          nil,
+		permissions:       nil,
+		userDefinedTypes:  nil,
+		columns:           nil,
+		databaseCollation: "",
 	}
 
 	for _, option := range options {
@@ -144,6 +146,14 @@ func (command *ScriptsFolderCommand) writeDefinition(ctx context.Context, object
 }
 
 func (command *ScriptsFolderCommand) ReadMetadata(ctx context.Context) error {
+	collation, err := command.metaReader.DatabaseCollation(ctx)
+
+	if err != nil {
+		return err
+	}
+
+	command.databaseCollation = collation
+
 	permissions, err := command.metaReader.Permissions(ctx)
 
 	if err != nil {
@@ -241,6 +251,11 @@ func (command *ScriptsFolderCommand) ObjectTypeIncluded(object output.DatabaseOb
 	_, ok := command.types[object]
 
 	return ok
+}
+
+// DatabaseCollation возвращает collation базы
+func (command *ScriptsFolderCommand) DatabaseCollation() string {
+	return command.databaseCollation
 }
 
 func (command *ScriptsFolderCommand) databaseObjects(ctx context.Context) (chan rxgo.Item, error) {

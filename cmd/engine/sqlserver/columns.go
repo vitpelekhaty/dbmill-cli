@@ -508,6 +508,7 @@ func (col Column) columnDefinitionForTable() string {
 }
 
 func (col Column) columnDefinitionForMemoryOptimizedTable() string {
+	// TODO: требуется тестирование описаний полей для memory-optimized таблиц
 	var builder str.Builder
 
 	if col.HasCollation() {
@@ -703,12 +704,18 @@ from (
         [is_user_defined_type] = st.is_user_defined,
         [max_length] = iif(
             st.name in ('char', 'varchar', 'nchar', 'nvarchar', 'binary', 'varbinary'),
-            iif(columns.max_length = -1, 'max', cast(columns.max_length as nvarchar(4))),
+            iif(
+                    columns.max_length = -1,
+                    'max',
+                    iif(
+                            st.name in ('nchar', 'nvarchar'),
+                            cast(columns.max_length / 2 as nvarchar(4)),
+                            cast(columns.max_length as nvarchar(4))
+                        )
+            ),
             iif(
                 st.name = 'float',
-                iif(
-                    columns.max_length != 53, cast(columns.max_length as nvarchar(4)), null
-                ),
+                iif(columns.max_length != 53, cast(columns.max_length as nvarchar(4)), null),
                 null
             )
         ),
@@ -736,8 +743,8 @@ from (
         [is_xml_document] = columns.is_xml_document,
         [xml_schema_collection_schema] = schema_name(xsc.schema_id),
         [xml_schema_collection_name] = xsc.name,
-        [default_constraint] = defaultConstraintDefinition.name,
-        [default_object_definition] = defaultConstraintDefinition.definition,
+        [default_constraint] = def.name,
+        [default_object_definition] = def.definition,
         [is_sparse] = columns.is_sparse,
         [is_column_set] = columns.is_column_set,
         [generated_always] = case columns.generated_always_type
@@ -761,7 +768,7 @@ from (
         inner join sys.objects as objects on (o.object_id = objects.object_id)
             inner join sys.columns as columns on (objects.object_id = columns.object_id)
                 inner join sys.types as st on (columns.user_type_id = st.user_type_id)
-                left join sys.default_constraints as defaultConstraintDefinition on (columns.default_object_id = defaultConstraintDefinition.object_id)
+                left join sys.default_constraints as def on (columns.default_object_id = def.object_id)
                 left join sys.computed_columns as cc on (columns.object_id = cc.object_id)
                     and (columns.column_id = cc.column_id)
                 left join sys.identity_columns as ident on (columns.object_id = ident.object_id)
