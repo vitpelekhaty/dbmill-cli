@@ -509,6 +509,57 @@ func (col Column) columnDefinitionForTable() string {
 
 func (col Column) columnDefinitionForMemoryOptimizedTable() string {
 	var builder str.Builder
+
+	if col.HasCollation() {
+		collation := col.Collation()
+
+		if collation != col.defaultCollation {
+			builder.WriteSpace()
+			builder.WriteString("COLLATE " + collation)
+		}
+	}
+
+	if col.HasGenerateAlwaysDefinition() {
+		builder.WriteSpace()
+		builder.WriteString(col.GenerateAlwaysDefinition())
+
+		if col.IsHidden {
+			builder.WriteSpace()
+			builder.WriteString("HIDDEN")
+		}
+	}
+
+	if !col.IsNullable && !col.IsIdentity {
+		builder.WriteSpace()
+		builder.WriteString("NOT NULL")
+	}
+
+	if col.HasDefaultConstraintDefinition() {
+		defaultDefinition := fmt.Sprintf(`CONSTRAINT [%s] DEFAULT %s`, col.DefaultConstraintName(),
+			col.DefaultConstraintDefinition())
+
+		builder.WriteSpace()
+		builder.WriteString(defaultDefinition)
+	}
+
+	if col.IsIdentity {
+		builder.WriteSpace()
+		builder.WriteString("IDENTITY")
+
+		seed := col.IdentitySeedValue()
+		increment := col.IdentityIncrementValue()
+
+		if seed > 1 || increment > 1 {
+			identityValues := fmt.Sprintf("(%d, %d)", seed, increment)
+			builder.WriteString(identityValues)
+		}
+
+		if !col.IsReplicated {
+			builder.WriteSpace()
+			builder.WriteString("NOT FOR REPLICATION")
+		}
+	}
+
 	return builder.String()
 }
 
