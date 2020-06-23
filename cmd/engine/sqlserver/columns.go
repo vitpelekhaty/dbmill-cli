@@ -461,7 +461,7 @@ func (col Column) columnDefinitionForTable() string {
 
 		if col.IsHidden {
 			builder.WriteSpace()
-			builder.WriteString(" HIDDEN")
+			builder.WriteString("HIDDEN")
 		}
 	}
 
@@ -491,7 +491,48 @@ func (col Column) columnDefinitionForMemoryOptimizedTable() string {
 }
 
 func (col Column) columnDefinitionForUserDefinedTableType() string {
-	return ""
+	var builder str.Builder
+
+	if col.HasCollation() {
+		collation := col.Collation()
+
+		if collation != col.defaultCollation {
+			builder.WriteSpace()
+			builder.WriteString("COLLATE " + collation)
+		}
+	}
+
+	if !col.IsNullable && !col.IsIdentity {
+		builder.WriteSpace()
+		builder.WriteString("NOT NULL")
+	}
+
+	if col.HasDefaultDefinition() {
+		defaultDefinition := fmt.Sprintf(`DEFAULT %s`, col.DefaultDefinition())
+
+		builder.WriteSpace()
+		builder.WriteString(defaultDefinition)
+	}
+
+	if col.IsIdentity {
+		builder.WriteSpace()
+		builder.WriteString("IDENTITY")
+
+		seed := col.IdentitySeedValue()
+		increment := col.IdentityIncrementValue()
+
+		if seed > 1 || increment > 1 {
+			identityValues := fmt.Sprintf("(%d, %d)", seed, increment)
+			builder.WriteString(identityValues)
+		}
+	}
+
+	if col.IsRowGUIDCol {
+		builder.WriteSpace()
+		builder.WriteString("ROWGUIDCOL")
+	}
+
+	return builder.String()
 }
 
 // SetOptions устанавливает дополнительные опции поля таблицы/табличного типа
