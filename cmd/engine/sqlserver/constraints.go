@@ -1,5 +1,126 @@
 package sqlserver
 
+import (
+	"database/sql"
+)
+
+// IndexType тип индекса
+type IndexType byte
+
+const (
+	// IndexTypeCustomIndex пользовательский индекс
+	IndexTypeCustomIndex IndexType = iota
+	// IndexTypePrimaryKey первичный ключ
+	IndexTypePrimaryKey
+	// IndexTypeUnique уникальный индекс
+	IndexTypeUnique
+)
+
+// Index индекс
+// (https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-indexes-transact-sql)
+type Index struct {
+	// Name наименование
+	Name string
+	// Type тип индекса (HEAP, CLUSTERED, NONCLUSTERED etc)
+	Type string
+	// IsUnique уникальный индекс
+	IsUnique bool
+	// IsPrimaryKey первичный ключ
+	IsPrimaryKey bool
+	// IsUniqueConstraint индекс является частью ограничения UNIQUE
+	IsUniqueConstraint bool
+	// IgnoreDupKey значение параметра IGNORE_DUP_KEY
+	IgnoreDupKey bool
+	// FillFactor значение FILLFACTOR
+	FillFactor int
+	// IsPadded значение параметра PADINDEX
+	IsPadded bool
+	// IsDisabled индекс отключен
+	IsDisabled bool
+	// IsHypothetical индекс является гипотетическим
+	IsHypothetical bool
+	// IsIgnoredInOptimization
+	IsIgnoredInOptimization bool
+	// AllowRowLocks индекс допускает блокировку строк
+	AllowRowLocks bool
+	// AllowPageLocks индекс допускает блокировку страниц
+	AllowPageLocks bool
+	// SuppressDupKeyMessages
+	SuppressDupKeyMessages bool
+	// AutoCreated индекс создан автоматической настройкой
+	AutoCreated bool
+	// OptimizeForSequentialKey для индекса включена оптимизация вставки последней страницы
+	OptimizeForSequentialKey bool
+	// Columns ключевые поля в индексе
+	Columns IndexedColumns
+	// IncludedColumns неключевые поля, включенные в индекс
+	IncludedColumns IndexedColumns
+
+	hasFilter        bool
+	filterDefinition sql.NullString
+	bucketCount      sql.NullInt64
+}
+
+// BucketCount возвращает число контейнеров, которые необходимо создать в хэш-индексе
+func (index Index) BucketCount() int {
+	if index.bucketCount.Valid {
+		return int(index.bucketCount.Int64)
+	}
+
+	return 0
+}
+
+// HasFilter индекс с фильром
+func (index Index) HasFilter() bool {
+	return index.hasFilter
+}
+
+// FilterDefinition возвращает выражение для подмножества строк, включенного в фильтруемый индекс
+func (index Index) FilterDefinition() string {
+	if index.hasFilter && index.filterDefinition.Valid {
+		return index.filterDefinition.String
+	}
+
+	return ""
+}
+
+// IndexType тип индекса
+func (index Index) IndexType() IndexType {
+	if index.IsPrimaryKey {
+		return IndexTypePrimaryKey
+	}
+
+	if index.IsUnique {
+		return IndexTypeUnique
+	}
+
+	return IndexTypeCustomIndex
+}
+
+// IndexedColumn индексируемые поля
+// (https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-index-columns-transact-sql)
+type IndexedColumn struct {
+	// ID поля в индексе
+	ID int
+	// Name наименование поля
+	Name string
+	// IsDescendingKey насправление сортировки - по убыванию
+	IsDescendingKey bool
+	// KeyOrdinal порядковый номер (нумерация начинается с 1) внутри набора ключевых столбцов
+	KeyOrdinal int
+	// PartitionOrdinal порядковый номер (нумерация начинается с 1) внутри набора столбцов секционирования
+	PartitionOrdinal int
+	// ColumnStoreOrderOrdinal порядковый номер (от 1) в наборе столбцов в упорядоченном кластеризованном
+	// индексе columnstore
+	ColumnStoreOrderOrdinal int
+}
+
+// IndexedColumns тип списка индексируемых полей
+type IndexedColumns map[string]*IndexedColumn
+
+// Indexes тип списка индексов объектов БД
+type Indexes map[string]*Index
+
 const selectIndexes = `
 select indexes.catalog, indexes.[schema], indexes.object_name, indexes.index_name, indexes.index_type,
     indexes.is_unique, indexes.is_primary_key, indexes.is_unique_constraint, indexes.ignore_dup_key,
