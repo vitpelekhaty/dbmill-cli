@@ -273,7 +273,7 @@ from (
         [catalog] = db_name(),
         [type] = types.name,
         [schema] = schema_name(types.schema_id),
-        [parent_type] = st.name,
+        [parent_type] = null,
         [max_length] = null,
         [precision] = null,
         [scale] = null,
