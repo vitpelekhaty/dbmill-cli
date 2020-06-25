@@ -56,3 +56,49 @@ from (
 ) as indexes
 order by indexes.catalog, indexes.[schema], indexes.object_name, indexes.index_id, indexes.index_column_id
 `
+
+const selectForeignKeys = `
+select fk.catalog, fk.foreign_key_name, fk.constraint_column_id, fk.parent_object_schema, fk.parent_object_name,
+    fk.parent_column_name, fk.referenced_object_schema, fk.referenced_object_name, fk.referenced_columns_name,
+    fk.key_index_id, fk.is_disabled, fk.is_not_for_replication, fk.is_not_trusted, fk.delete_referential_action,
+    fk.update_referential_action
+from (
+    select
+        [catalog] = db_name(),
+        [foreign_key_name] = constraint_objects.name,
+        [constraint_column_id] = fk_columns.constraint_column_id,
+        [parent_object_schema] = schema_name(parent_objects.schema_id),
+        [parent_object_name] = parent_objects.name,
+        [parent_column_name] = parent_columns.name,
+        [referenced_object_schema] = schema_name(referenced_objects.schema_id),
+        [referenced_object_name] = referenced_objects.name,
+        [referenced_columns_name] = referenced_columns.name,
+        [key_index_id] = fk.key_index_id,
+        [is_disabled] = fk.is_disabled,
+        [is_not_for_replication] = fk.is_not_for_replication,
+        [is_not_trusted] = fk.is_not_trusted,
+        [delete_referential_action] = case fk.delete_referential_action
+            when 1 then 'CASCADE'
+            when 2 then 'SET NULL'
+            when 3 then 'SET DEFAULT'
+            else 'NO ACTION'
+        end,
+        [update_referential_action] = case fk.update_referential_action
+            when 1 then 'CASCADE'
+            when 2 then 'SET NULL'
+            when 3 then 'SET DEFAULT'
+            else 'NO ACTION'
+        end
+
+    from sys.foreign_key_columns as fk_columns
+        inner join sys.objects as constraint_objects on (fk_columns.constraint_object_id = constraint_objects.object_id)
+            inner join sys.foreign_keys as fk on (constraint_objects.object_id = fk.object_id)
+        inner join sys.columns as parent_columns on (fk_columns.parent_object_id = parent_columns.object_id)
+            and (fk_columns.parent_column_id = parent_columns.column_id)
+            inner join sys.objects as parent_objects on (parent_columns.object_id = parent_objects.object_id)
+        inner join sys.columns as referenced_columns on (fk_columns.referenced_object_id = referenced_columns.object_id)
+            and (fk_columns.referenced_column_id = referenced_columns.column_id)
+            inner join sys.objects as referenced_objects on (referenced_columns.object_id = referenced_objects.object_id)
+) as fk
+order by fk.catalog, fk.parent_object_schema, fk.parent_object_name, fk.foreign_key_name, fk.constraint_column_id
+`
