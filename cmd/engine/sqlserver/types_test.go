@@ -12,10 +12,13 @@ func TestUserDefinedType_Type(t *testing.T) {
 	}{
 		{
 			udt: UserDefinedType{
-				Catalog:        "test",
-				TypeName:       "MyNVarchar",
-				Schema:         "dbo",
-				ParentTypeName: "nvarchar",
+				Catalog:  "test",
+				TypeName: "MyNVarchar",
+				Schema:   "dbo",
+				parentTypeName: sql.NullString{
+					String: "nvarchar",
+					Valid:  true,
+				},
 				maxLength: sql.NullString{
 					String: "100",
 					Valid:  true,
@@ -40,10 +43,13 @@ func TestUserDefinedType_Type(t *testing.T) {
 		},
 		{
 			udt: UserDefinedType{
-				Catalog:        "test",
-				TypeName:       "MyMaxNVarchar",
-				Schema:         "dbo",
-				ParentTypeName: "nvarchar",
+				Catalog:  "test",
+				TypeName: "MyMaxNVarchar",
+				Schema:   "dbo",
+				parentTypeName: sql.NullString{
+					String: "nvarchar",
+					Valid:  true,
+				},
 				maxLength: sql.NullString{
 					String: "max",
 					Valid:  true,
@@ -68,10 +74,13 @@ func TestUserDefinedType_Type(t *testing.T) {
 		},
 		{
 			udt: UserDefinedType{
-				Catalog:        "test",
-				TypeName:       "MyFloat",
-				Schema:         "dbo",
-				ParentTypeName: "float",
+				Catalog:  "test",
+				TypeName: "MyFloat",
+				Schema:   "dbo",
+				parentTypeName: sql.NullString{
+					String: "float",
+					Valid:  true,
+				},
 				maxLength: sql.NullString{
 					String: "10",
 					Valid:  true,
@@ -96,10 +105,13 @@ func TestUserDefinedType_Type(t *testing.T) {
 		},
 		{
 			udt: UserDefinedType{
-				Catalog:        "test",
-				TypeName:       "MyDouble",
-				Schema:         "dbo",
-				ParentTypeName: "double",
+				Catalog:  "test",
+				TypeName: "MyDouble",
+				Schema:   "dbo",
+				parentTypeName: sql.NullString{
+					String: "double",
+					Valid:  true,
+				},
 				maxLength: sql.NullString{
 					String: "",
 					Valid:  false,
@@ -124,10 +136,13 @@ func TestUserDefinedType_Type(t *testing.T) {
 		},
 		{
 			udt: UserDefinedType{
-				Catalog:        "test",
-				TypeName:       "MyAccountNumber",
-				Schema:         "dbo",
-				ParentTypeName: "double",
+				Catalog:  "test",
+				TypeName: "MyAccountNumber",
+				Schema:   "dbo",
+				parentTypeName: sql.NullString{
+					String: "double",
+					Valid:  true,
+				},
 				maxLength: sql.NullString{
 					String: "",
 					Valid:  false,
@@ -152,10 +167,13 @@ func TestUserDefinedType_Type(t *testing.T) {
 		},
 		{
 			udt: UserDefinedType{
-				Catalog:        "test",
-				TypeName:       "MyBit",
-				Schema:         "dbo",
-				ParentTypeName: "bit",
+				Catalog:  "test",
+				TypeName: "MyBit",
+				Schema:   "dbo",
+				parentTypeName: sql.NullString{
+					String: "bit",
+					Valid:  true,
+				},
 				maxLength: sql.NullString{
 					String: "",
 					Valid:  false,

@@ -88,7 +88,7 @@ func (reader *MetadataReader) UserDefinedTypes(ctx context.Context) (UserDefined
 		catalog           string
 		typeName          string
 		schema            string
-		parentTypeName    string
+		parentTypeName    sql.NullString
 		maxLength         sql.NullString
 		precision         sql.NullInt32
 		scale             sql.NullInt32
@@ -112,7 +112,7 @@ func (reader *MetadataReader) UserDefinedTypes(ctx context.Context) (UserDefined
 			Catalog:           catalog,
 			TypeName:          typeName,
 			Schema:            schema,
-			ParentTypeName:    parentTypeName,
+			parentTypeName:    parentTypeName,
 			maxLength:         maxLength,
 			precision:         precision,
 			scale:             scale,
@@ -272,4 +272,128 @@ func (meta *MetadataReader) DatabaseCollation(ctx context.Context) (string, erro
 	err = stmt.QueryRowContext(ctx).Scan(&collation)
 
 	return collation, err
+}
+
+// Indexes возвращает список индексов из БД, сгруппированных по объектам
+func (meta *MetadataReader) Indexes(ctx context.Context) (Indexes, error) {
+	stmt, err := meta.db.PrepareContext(ctx, selectIndexes)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer stmt.Close()
+
+	rows, err := stmt.QueryContext(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	indexes := make(Indexes)
+
+	var (
+		catalog                  string
+		schema                   string
+		objectName               string
+		indexName                string
+		indexType                string
+		isUnique                 bool
+		isPrimaryKey             bool
+		isUniqueConstraint       bool
+		ignoreDupKey             bool
+		fillFactor               byte
+		isPadded                 bool
+		isDisabled               bool
+		isHypothetical           bool
+		isIgnoredInOptimization  bool
+		allowRowLocks            bool
+		allowPageLocks           bool
+		suppressDupKeyMessages   bool
+		autoCreated              bool
+		optimizeForSequentialKey bool
+		hasFilter                bool
+		filterDefinition         sql.NullString
+		indexColumnID            int
+		columnName               string
+		isDescendingKey          bool
+		isIncludedColumn         bool
+		keyOrdinal               int
+		partitionOrdinal         int
+		columnStoreOrderOrdinal  int
+		bucketCount              sql.NullInt64
+
+		name string
+	)
+
+	for rows.Next() {
+		err = rows.Scan(&catalog, &schema, &objectName, &indexName, &indexType, &isUnique, &isPrimaryKey,
+			&isUniqueConstraint, &ignoreDupKey, &fillFactor, &isPadded, &isDisabled, &isHypothetical,
+			&isIgnoredInOptimization, &allowRowLocks, &allowPageLocks, &suppressDupKeyMessages, &autoCreated,
+			&optimizeForSequentialKey, &hasFilter, &filterDefinition, &indexColumnID, &columnName, &isDescendingKey,
+			&isIncludedColumn, &keyOrdinal, &partitionOrdinal, &columnStoreOrderOrdinal, &bucketCount)
+
+		if err != nil {
+			return nil, err
+		}
+
+		name = SchemaAndObject(schema, objectName, true)
+
+		column := &IndexedColumn{
+			ID:                      indexColumnID,
+			Name:                    columnName,
+			IsDescendingKey:         isDescendingKey,
+			KeyOrdinal:              keyOrdinal,
+			PartitionOrdinal:        partitionOrdinal,
+			ColumnStoreOrderOrdinal: columnStoreOrderOrdinal,
+		}
+
+		if index, ok := indexes[name]; ok {
+			if isIncludedColumn {
+				if _, ok := index.IncludedColumns[columnName]; !ok {
+					index.IncludedColumns[columnName] = column
+				}
+			} else {
+				if _, ok := index.Columns[columnName]; !ok {
+					index.Columns[columnName] = column
+				}
+			}
+		} else {
+			index := &Index{
+				Name:                     indexName,
+				Type:                     indexType,
+				IsUnique:                 isUnique,
+				IsPrimaryKey:             isPrimaryKey,
+				IsUniqueConstraint:       isUniqueConstraint,
+				IgnoreDupKey:             ignoreDupKey,
+				FillFactor:               fillFactor,
+				IsPadded:                 isPadded,
+				IsDisabled:               isDisabled,
+				IsHypothetical:           isHypothetical,
+				IsIgnoredInOptimization:  isIgnoredInOptimization,
+				AllowRowLocks:            allowRowLocks,
+				AllowPageLocks:           allowPageLocks,
+				SuppressDupKeyMessages:   suppressDupKeyMessages,
+				AutoCreated:              autoCreated,
+				OptimizeForSequentialKey: optimizeForSequentialKey,
+				Columns:                  make(IndexedColumns),
+				IncludedColumns:          make(IndexedColumns),
+				hasFilter:                hasFilter,
+				filterDefinition:         filterDefinition,
+				bucketCount:              bucketCount,
+			}
+
+			if isIncludedColumn {
+				index.IncludedColumns[columnName] = column
+			} else {
+				index.Columns[columnName] = column
+			}
+
+			indexes[name] = index
+		}
+	}
+
+	return indexes, nil
 }

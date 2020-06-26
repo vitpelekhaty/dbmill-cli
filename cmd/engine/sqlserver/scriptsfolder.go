@@ -24,9 +24,11 @@ type ScriptsFolderCommand struct {
 	definitionCallback commands.ObjectDefinitionCallback
 	metaReader         *MetadataReader
 
-	userDefinedTypes  UserDefinedTypes
-	permissions       ObjectPermissions
-	columns           ObjectColumns
+	userDefinedTypes UserDefinedTypes
+	permissions      ObjectPermissions
+	columns          ObjectColumns
+	indexes          Indexes
+
 	databaseCollation string
 }
 
@@ -45,9 +47,11 @@ func NewScriptsFolderCommand(engine *Engine, options ...commands.ScriptsFolderOp
 		definitionCallback: nil,
 		metaReader:         metaReader,
 
-		permissions:       nil,
-		userDefinedTypes:  nil,
-		columns:           nil,
+		permissions:      nil,
+		userDefinedTypes: nil,
+		columns:          nil,
+		indexes:          nil,
+
 		databaseCollation: "",
 	}
 
@@ -177,6 +181,14 @@ func (command *ScriptsFolderCommand) ReadMetadata(ctx context.Context) error {
 	}
 
 	command.columns = columns
+
+	indexes, err := command.metaReader.Indexes(ctx)
+
+	if err != nil {
+		return err
+	}
+
+	command.indexes = indexes
 
 	return nil
 }

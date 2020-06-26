@@ -32,7 +32,7 @@ type Index struct {
 	// IgnoreDupKey значение параметра IGNORE_DUP_KEY
 	IgnoreDupKey bool
 	// FillFactor значение FILLFACTOR
-	FillFactor int
+	FillFactor byte
 	// IsPadded значение параметра PADINDEX
 	IsPadded bool
 	// IsDisabled индекс отключен

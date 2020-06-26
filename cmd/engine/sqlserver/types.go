@@ -16,7 +16,7 @@ type UserDefinedType struct {
 	Catalog           string
 	TypeName          string
 	Schema            string
-	ParentTypeName    string
+	parentTypeName    sql.NullString
 	maxLength         sql.NullString
 	precision         sql.NullInt32
 	scale             sql.NullInt32
@@ -87,11 +87,19 @@ func (udt UserDefinedType) Collation() string {
 	return ""
 }
 
+func (udt UserDefinedType) ParentTypeName() string {
+	if udt.parentTypeName.Valid && !udt.IsTableType {
+		return udt.parentTypeName.String
+	}
+
+	return ""
+}
+
 // ParentType возвращает полное описание родительского типа
 func (udt UserDefinedType) ParentType() string {
 	var builder strings.Builder
 
-	builder.WriteString("[" + udt.ParentTypeName + "]")
+	builder.WriteString("[" + udt.ParentTypeName() + "]")
 
 	openedParentheses := udt.HasMaxLength() || udt.HasPrecision()
 
