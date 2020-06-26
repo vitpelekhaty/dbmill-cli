@@ -8,11 +8,13 @@ import (
 // MetadataReader объект чтения метаданных из базы
 type MetadataReader struct {
 	db *sql.DB
+
+	serverVersion int
 }
 
 // NewMetadataReader конструктор MetadataReader
-func NewMetadataReader(engine *Engine) (*MetadataReader, error) {
-	return &MetadataReader{db: engine.db}, nil
+func NewMetadataReader(engine *Engine, serverVersion int) (*MetadataReader, error) {
+	return &MetadataReader{db: engine.db, serverVersion: serverVersion}, nil
 }
 
 // Permissions возвращает разрешения на объекты БД
@@ -274,9 +276,24 @@ func (meta *MetadataReader) DatabaseCollation(ctx context.Context) (string, erro
 	return collation, err
 }
 
+var selectIndexesQueries = map[int]string{
+	15: selectIndexes,
+}
+
+// selectIndexesQuery возвращает текст запроса набора индексов для соответствующей версии SQL Server.
+// Если для указанной версии нет варианта текста запроса, то возвращается текст для минимальной поддерживаемой
+// версии
+func (meta *MetadataReader) selectIndexesQuery() string {
+	if query, ok := selectIndexesQueries[meta.serverVersion]; ok {
+		return query
+	}
+
+	return selectIndexes
+}
+
 // Indexes возвращает справочник индексов из БД, сгруппированных по объектам
 func (meta *MetadataReader) Indexes(ctx context.Context) (Indexes, error) {
-	stmt, err := meta.db.PrepareContext(ctx, selectIndexes)
+	stmt, err := meta.db.PrepareContext(ctx, meta.selectIndexesQuery())
 
 	if err != nil {
 		return nil, err

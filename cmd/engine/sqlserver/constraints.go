@@ -70,7 +70,7 @@ func (index Index) BucketCount() int {
 	return 0
 }
 
-// HasFilter индекс с фильром
+// HasFilter индекс с фильтром
 func (index Index) HasFilter() bool {
 	return index.hasFilter
 }

@@ -3,6 +3,7 @@ package sqlserver
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	_ "github.com/denisenkom/go-mssqldb"
 
@@ -16,6 +17,8 @@ type Engine struct {
 	db     *sql.DB
 	logger log.ILogger
 	output output.IScriptsFolderOutput
+
+	serverVersion int
 }
 
 // NewEngine возвращает экземпляр Engine
@@ -26,16 +29,18 @@ func NewEngine(connection string) (*Engine, error) {
 		return nil, err
 	}
 
-	err = db.PingContext(context.Background())
+	serverVersion, err := serverVersion(db, context.Background())
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get a version of the server: %v", err)
 	}
 
 	return &Engine{
 		db:     db,
 		logger: nil,
 		output: output.DefaultScriptsFolderOutput,
+
+		serverVersion: serverVersion,
 	}, nil
 }
 
@@ -60,7 +65,7 @@ func (engine *Engine) ScriptsFolder(options ...commands.ScriptsFolderOption) com
 
 // MetadataReader возвращает объект чтения метаданных
 func (engine *Engine) MetadataReader() (*MetadataReader, error) {
-	return NewMetadataReader(engine)
+	return NewMetadataReader(engine, engine.serverVersion)
 }
 
 // Log создает запись в логе, если указан логгер
