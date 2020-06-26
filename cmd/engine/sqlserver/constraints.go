@@ -16,7 +16,7 @@ const (
 	IndexTypeUnique
 )
 
-// Index индекс
+// Index определение индекса
 // (https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-indexes-transact-sql)
 type Index struct {
 	// Name наименование
@@ -115,11 +115,46 @@ type IndexedColumn struct {
 	ColumnStoreOrderOrdinal int
 }
 
-// IndexedColumns тип списка индексируемых полей
+// IndexedColumns тип справочника индексируемых полей. Ключ справочника - наименование поля
 type IndexedColumns map[string]*IndexedColumn
 
-// Indexes тип списка индексов объектов БД
+// Indexes тип справочника определений индексов объектов БД. Ключ справочника - наименование объекта БД
 type Indexes map[string]*Index
+
+// ForeignKey определение внешнего ключа
+type ForeignKey struct {
+	// Name наименование внешнего ключа
+	Name string
+	// ReferencedObjectSchema схема объекта БД, на который ссылается ключ
+	ReferencedObjectSchema string
+	// ReferencedObjectName наименование объекта БД, на который ссылается ключ
+	ReferencedObjectName string
+	// IsDisabled ключ отключен
+	IsDisabled bool
+	// IsNotForReplication ключ создан с опцией NOT FOR REPLICATION
+	IsNotForReplication bool
+	// IsNotTrusted ограничение ключа не проверено системой
+	IsNotTrusted bool
+	// DeleteReferentialAction действие при удалении значения, на которое ссылается ключ
+	DeleteReferentialAction string
+	// UpdateReferentialAction действие при обновлении значения, на которое ссылается ключ
+	UpdateReferentialAction string
+	// ColumnsReferences ссылки ключевых полей
+	ColumnsReferences map[string]*ColumnReference
+}
+
+// ColumnReference ссылка поля на поле внешнего объекта
+type ColumnReference struct {
+	// ID идентификатор ссылки
+	ID int
+	// Column поле объекта БД
+	Column string
+	// ReferencedColumn поле внешнего объекта БД
+	ReferencedColumn string
+}
+
+// ForeignKeys тип справочника определений внешних ключей. Ключ справочника - наименование объекта БД
+type ForeignKeys map[string]*ForeignKey
 
 const selectIndexes = `
 select indexes.catalog, indexes.[schema], indexes.object_name, indexes.index_name, indexes.index_type,
