@@ -216,7 +216,7 @@ order by indexes.catalog, indexes.[schema], indexes.object_name, indexes.index_i
 const selectForeignKeys = `
 select fk.catalog, fk.foreign_key_name, fk.constraint_column_id, fk.parent_object_schema, fk.parent_object_name,
     fk.parent_column_name, fk.referenced_object_schema, fk.referenced_object_name, fk.referenced_columns_name,
-    fk.key_index_id, fk.is_disabled, fk.is_not_for_replication, fk.is_not_trusted, fk.delete_referential_action,
+    fk.is_disabled, fk.is_not_for_replication, fk.is_not_trusted, fk.delete_referential_action,
     fk.update_referential_action
 from (
     select

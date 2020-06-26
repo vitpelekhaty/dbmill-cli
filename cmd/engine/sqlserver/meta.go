@@ -274,7 +274,7 @@ func (meta *MetadataReader) DatabaseCollation(ctx context.Context) (string, erro
 	return collation, err
 }
 
-// Indexes возвращает список индексов из БД, сгруппированных по объектам
+// Indexes возвращает справочник индексов из БД, сгруппированных по объектам
 func (meta *MetadataReader) Indexes(ctx context.Context) (Indexes, error) {
 	stmt, err := meta.db.PrepareContext(ctx, selectIndexes)
 
@@ -396,4 +396,86 @@ func (meta *MetadataReader) Indexes(ctx context.Context) (Indexes, error) {
 	}
 
 	return indexes, nil
+}
+
+// ForeignKeys возвращает справочник внешних ключей
+func (meta *MetadataReader) ForeignKeys(ctx context.Context) (ForeignKeys, error) {
+	stmt, err := meta.db.PrepareContext(ctx, selectForeignKeys)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer stmt.Close()
+
+	rows, err := stmt.QueryContext(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	foreignKeys := make(ForeignKeys)
+
+	var (
+		catalog                 string
+		foreignKeyName          string
+		constraintColumnID      int
+		parentObjectSchema      string
+		parentObjectName        string
+		parentColumnName        string
+		referencedObjectSchema  string
+		referencedObjectName    string
+		referencedColumnsName   string
+		isDisabled              bool
+		isNotForReplication     bool
+		isNotTrusted            bool
+		deleteReferentialAction string
+		updateReferentialAction string
+
+		name string
+	)
+
+	for rows.Next() {
+		err = rows.Scan(&catalog, &foreignKeyName, &constraintColumnID, &parentObjectSchema, &parentObjectName,
+			&parentColumnName, &referencedObjectSchema, &referencedObjectName, &referencedColumnsName, &isDisabled,
+			&isNotForReplication, &isNotTrusted, &deleteReferentialAction, &updateReferentialAction)
+
+		if err != nil {
+			return nil, err
+		}
+
+		name = SchemaAndObject(parentObjectSchema, parentObjectName, true)
+
+		columnReference := &ColumnReference{
+			ID:               constraintColumnID,
+			Column:           parentColumnName,
+			ReferencedColumn: referencedColumnsName,
+		}
+
+		if fk, ok := foreignKeys[name]; ok {
+			if _, ok := fk.ColumnsReferences[parentColumnName]; !ok {
+				fk.ColumnsReferences[parentColumnName] = columnReference
+			}
+		} else {
+			fk := &ForeignKey{
+				Name:                    foreignKeyName,
+				ReferencedObjectSchema:  referencedObjectSchema,
+				ReferencedObjectName:    referencedObjectName,
+				IsDisabled:              isDisabled,
+				IsNotForReplication:     isNotForReplication,
+				IsNotTrusted:            isNotTrusted,
+				DeleteReferentialAction: deleteReferentialAction,
+				UpdateReferentialAction: updateReferentialAction,
+				ColumnsReferences:       make(map[string]*ColumnReference),
+			}
+
+			fk.ColumnsReferences[parentColumnName] = columnReference
+
+			foreignKeys[name] = fk
+		}
+	}
+
+	return foreignKeys, nil
 }

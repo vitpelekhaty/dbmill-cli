@@ -28,6 +28,7 @@ type ScriptsFolderCommand struct {
 	permissions      ObjectPermissions
 	columns          ObjectColumns
 	indexes          Indexes
+	foreignKeys      ForeignKeys
 
 	databaseCollation string
 }
@@ -51,6 +52,7 @@ func NewScriptsFolderCommand(engine *Engine, options ...commands.ScriptsFolderOp
 		userDefinedTypes: nil,
 		columns:          nil,
 		indexes:          nil,
+		foreignKeys:      nil,
 
 		databaseCollation: "",
 	}
@@ -189,6 +191,14 @@ func (command *ScriptsFolderCommand) ReadMetadata(ctx context.Context) error {
 	}
 
 	command.indexes = indexes
+
+	foreignKeys, err := command.metaReader.ForeignKeys(ctx)
+
+	if err != nil {
+		return err
+	}
+
+	command.foreignKeys = foreignKeys
 
 	return nil
 }
