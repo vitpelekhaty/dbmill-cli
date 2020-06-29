@@ -622,8 +622,8 @@ func (col *Column) SetOptions(options ...ColumnOption) {
 // Columns поля
 type Columns map[string]*Column
 
-// SortedList возвращает срез полей
-func (columns Columns) List() []*Column {
+// Slice возвращает срез полей
+func (columns Columns) Slice() []*Column {
 	length := len(columns)
 
 	if length == 0 {

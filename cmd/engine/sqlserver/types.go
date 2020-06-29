@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/vitpelekhaty/dbmill-cli/internal/pkg/output"
+	str "github.com/vitpelekhaty/dbmill-cli/internal/pkg/strings"
 )
 
 type UserDefinedType struct {
@@ -130,6 +131,19 @@ func (udt UserDefinedType) ParentType() string {
 	return builder.String()
 }
 
+// Flags параметры создания пользовательского типа
+func (udt UserDefinedType) Flags() []string {
+	flags := make([]string, 0)
+
+	if udt.IsTableType {
+		if udt.IsMemoryOptimized {
+			flags = append(flags, "MEMORY_OPTIMIZED = ON")
+		}
+	}
+
+	return flags
+}
+
 type UserDefinedTypes map[string]*UserDefinedType
 
 func (types UserDefinedTypes) append(udt *UserDefinedType) {
@@ -201,37 +215,110 @@ func (command *ScriptsFolderCommand) writeDataTypeDefinition(ctx context.Context
 
 func (command *ScriptsFolderCommand) writeTableTypeDefinition(ctx context.Context, object IDatabaseObject,
 	domain *UserDefinedType) (IDatabaseObject, error) {
-	var builder strings.Builder
+	var builder str.Builder
 	userTypeName := domain.SchemaAndName(true)
 
 	builder.WriteString(fmt.Sprintf("CREATE TYPE %s AS TABLE", userTypeName))
 
-	columns := command.columns[userTypeName]
+	objectColumns := command.columns[userTypeName]
+	objectIndexes := command.indexes[object.SchemaAndName(true)]
 
-	if len(columns) > 0 {
+	if len(objectColumns) > 0 || len(objectIndexes) > 0 {
 		builder.WriteString(" (")
 
-		cols := columns.List()
-		sort.Slice(cols, func(i, j int) bool {
-			return cols[i].ID < cols[j].ID
-		})
+		emptyBlock := true
+		cols := objectColumns.Slice()
 
-		for index, col := range cols {
-			col.SetOptions(WithColumnOwner(OwnerUserDefinedTableDataType),
-				WithDefaultCollation(command.DatabaseCollation()))
+		if len(cols) > 0 {
+			sort.Slice(cols, func(i, j int) bool {
+				return cols[i].ID < cols[j].ID
+			})
 
-			if index > 0 {
-				builder.WriteRune(',')
+			for index, col := range cols {
+				col.SetOptions(WithColumnOwner(OwnerUserDefinedTableDataType),
+					WithDefaultCollation(command.DatabaseCollation()))
+
+				if index > 0 {
+					builder.WriteRune(',')
+				}
+
+				builder.WriteString("\n  " + col.String())
+				emptyBlock = false
 			}
+		}
 
-			builder.WriteString("\n  " + col.String())
+		primaryKeys := objectIndexes.PrimaryKeys()
+
+		if len(primaryKeys) > 0 {
+			pks := primaryKeys.Slice()
+
+			sort.Slice(pks, func(i, j int) bool {
+				return strings.Compare(pks[i].Name, pks[j].Name) < 0
+			})
+
+			for index, pk := range pks {
+				pk.SetOptions(WithIndexOwner(OwnerUserDefinedTableDataType))
+
+				if !emptyBlock || index > 0 {
+					builder.WriteRune(',')
+				}
+
+				builder.WriteString("\n  " + pk.String())
+				emptyBlock = false
+			}
+		}
+
+		uniqueIndexes := objectIndexes.UniqueIndexes()
+
+		if len(uniqueIndexes) > 0 {
+			uk := uniqueIndexes.Slice()
+
+			sort.Slice(uk, func(i, j int) bool {
+				return strings.Compare(uk[i].Name, uk[j].Name) < 0
+			})
+
+			for index, ux := range uk {
+				ux.SetOptions(WithIndexOwner(OwnerUserDefinedTableDataType))
+
+				if !emptyBlock || index > 0 {
+					builder.WriteRune(',')
+				}
+
+				builder.WriteString("\n  " + ux.String())
+				emptyBlock = false
+			}
+		}
+
+		customIndexes := objectIndexes.CustomIndexes()
+
+		if len(customIndexes) > 0 {
+			cix := customIndexes.Slice()
+
+			sort.Slice(cix, func(i, j int) bool {
+				return strings.Compare(cix[i].Name, cix[j].Name) < 0
+			})
+
+			for index, ix := range cix {
+				ix.SetOptions(WithIndexOwner(OwnerUserDefinedTableDataType))
+
+				if !emptyBlock || index > 0 {
+					builder.WriteRune(',')
+				}
+
+				builder.WriteString("\n  " + ix.String())
+				emptyBlock = false
+			}
 		}
 
 		builder.WriteString("\n)")
 	}
 
-	if domain.IsMemoryOptimized {
-		builder.WriteString("\nWITH (MEMORY_OPTIMIZED = ON)")
+	flags := domain.Flags()
+
+	if len(flags) > 0 {
+		sort.Strings(flags)
+
+		builder.WriteString(fmt.Sprintf("\nWITH (%s)", strings.Join(flags, ", ")))
 	}
 
 	builder.WriteString("\nGO")

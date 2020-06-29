@@ -134,19 +134,26 @@ func (index Index) IsType(typ string) bool {
 	return strings.EqualFold(index.Type, typ)
 }
 
-// Options параметры индекса
-func (index Index) Options() []string {
-	options := make([]string, 0)
+// Flags флаги создания индекса
+func (index Index) Flags() []string {
+	flags := make([]string, 0)
 
 	if index.IsHash() {
-		options = append(options, fmt.Sprintf("BUCKET_COUNT = %d", index.BucketCount()))
+		flags = append(flags, fmt.Sprintf("BUCKET_COUNT = %d", index.BucketCount()))
 	}
 
 	if index.IgnoreDupKey {
-		options = append(options, "IGNORE_DUP_KEY = ON")
+		flags = append(flags, "IGNORE_DUP_KEY = ON")
 	}
 
-	return options
+	return flags
+}
+
+// SetOptions устанавливает дополнительные опции поля таблицы/табличного типа
+func (index *Index) SetOptions(options ...IndexOption) {
+	for _, option := range options {
+		option(index)
+	}
 }
 
 // String возвращает определение индекса
@@ -203,13 +210,13 @@ func (index Index) constraintDefinitionForTableType() string {
 		builder.WriteString("(" + ct + ")")
 	}
 
-	options := index.Options()
+	flags := index.Flags()
 
-	if len(options) > 0 {
-		sort.Strings(options)
+	if len(flags) > 0 {
+		sort.Strings(flags)
 
 		builder.WriteSpace()
-		builder.WriteString(fmt.Sprintf("WITH (%s)", strings.Join(options, ", ")))
+		builder.WriteString(fmt.Sprintf("WITH (%s)", strings.Join(flags, ", ")))
 	}
 
 	includedColumns := index.IncludedColumns.Slice()
