@@ -27,7 +27,7 @@ type ScriptsFolderCommand struct {
 	userDefinedTypes UserDefinedTypes
 	permissions      ObjectPermissions
 	columns          ObjectColumns
-	indexes          Indexes
+	indexes          ObjectsIndexes
 	foreignKeys      ForeignKeys
 
 	databaseCollation string

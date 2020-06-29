@@ -20,23 +20,25 @@ func WithDefaultCollation(collation string) ColumnOption {
 	}
 }
 
-// WithColumnOwner владелец поля (по умолчанию - ColumnOwnerTable)
-func WithColumnOwner(owner ColumnOwner) ColumnOption {
+// WithColumnOwner владелец поля (по умолчанию - OwnerTable)
+func WithColumnOwner(owner ColumnOrIndexOwner) ColumnOption {
 	return func(col *Column) {
 		col.owner = owner
 	}
 }
 
-// ColumnOwner владелец поля
-type ColumnOwner byte
+// ColumnOrIndexOwner владелец поля/индекса
+type ColumnOrIndexOwner byte
 
 const (
-	// ColumnOwnerTable владелец поля - таблица
-	ColumnOwnerTable ColumnOwner = iota
-	// ColumnOwnerMemoryOptimizedTable владелец поля - memory-optimized таблица
-	ColumnOwnerMemoryOptimizedTable
-	// ColumnOwnerUserDefinedTableDataType владелец поля - пользовательский табличный тип
-	ColumnOwnerUserDefinedTableDataType
+	// OwnerTable владелец - таблица
+	OwnerTable ColumnOrIndexOwner = iota
+	// OwnerMemoryOptimizedTable владелец - memory-optimized таблица
+	OwnerMemoryOptimizedTable
+	// OwnerUserDefinedTableDataType владелец - пользовательский табличный тип
+	OwnerUserDefinedTableDataType
+	// OwnerAlterTable владелец - блок ALTER TABLE (для определения индексов)
+	OwnerAlterTable
 )
 
 // Column поле таблицы/табличного типа
@@ -82,7 +84,7 @@ type Column struct {
 	encryptionType                sql.NullString
 
 	defaultCollation string
-	owner            ColumnOwner
+	owner            ColumnOrIndexOwner
 }
 
 // HasMaxLength проверяет, указана ли максимальная длина (в байтах) для типа
@@ -407,11 +409,11 @@ func (col Column) columnDefinition() string {
 	}
 
 	switch col.owner {
-	case ColumnOwnerTable:
+	case OwnerTable:
 		return col.columnDefinitionForTable()
-	case ColumnOwnerMemoryOptimizedTable:
+	case OwnerMemoryOptimizedTable:
 		return col.columnDefinitionForMemoryOptimizedTable()
-	case ColumnOwnerUserDefinedTableDataType:
+	case OwnerUserDefinedTableDataType:
 		return col.columnDefinitionForUserDefinedTableType()
 	default:
 		return ""

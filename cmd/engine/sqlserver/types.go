@@ -217,7 +217,7 @@ func (command *ScriptsFolderCommand) writeTableTypeDefinition(ctx context.Contex
 		})
 
 		for index, col := range cols {
-			col.SetOptions(WithColumnOwner(ColumnOwnerUserDefinedTableDataType),
+			col.SetOptions(WithColumnOwner(OwnerUserDefinedTableDataType),
 				WithDefaultCollation(command.DatabaseCollation()))
 
 			if index > 0 {

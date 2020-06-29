@@ -2,6 +2,11 @@ package sqlserver
 
 import (
 	"database/sql"
+	"fmt"
+	"sort"
+	"strings"
+
+	str "github.com/vitpelekhaty/dbmill-cli/internal/pkg/strings"
 )
 
 // IndexType тип индекса
@@ -15,6 +20,16 @@ const (
 	// IndexTypeUnique уникальный индекс
 	IndexTypeUnique
 )
+
+// ColumnOption опция поля таблицы/табличного типа
+type IndexOption func(col *Index)
+
+// WithIndexOwner владелец индекса (по умолчанию - OwnerTable)
+func WithIndexOwner(owner ColumnOrIndexOwner) IndexOption {
+	return func(col *Index) {
+		col.owner = owner
+	}
+}
 
 // Index определение индекса
 // (https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-indexes-transact-sql)
@@ -59,6 +74,8 @@ type Index struct {
 	hasFilter        bool
 	filterDefinition sql.NullString
 	bucketCount      sql.NullInt64
+
+	owner ColumnOrIndexOwner
 }
 
 // BucketCount возвращает число контейнеров, которые необходимо создать в хэш-индексе
@@ -97,6 +114,130 @@ func (index Index) IndexType() IndexType {
 	return IndexTypeCustomIndex
 }
 
+// IsClustered кластерный индекс
+func (index Index) IsClustered() bool {
+	return index.IsType("CLUSTERED")
+}
+
+// IsNonClustered некластерный индекс
+func (index Index) IsNonClustered() bool {
+	return index.IsType("NONCLUSTERED")
+}
+
+// IsHash хеш-индекс
+func (index Index) IsHash() bool {
+	return index.IsType("HASH")
+}
+
+// IsType проверяет, является ли индекс индексом указанного типа
+func (index Index) IsType(typ string) bool {
+	return strings.EqualFold(index.Type, typ)
+}
+
+// Options параметры индекса
+func (index Index) Options() []string {
+	options := make([]string, 0)
+
+	if index.IsHash() {
+		options = append(options, fmt.Sprintf("BUCKET_COUNT = %d", index.BucketCount()))
+	}
+
+	if index.IgnoreDupKey {
+		options = append(options, "IGNORE_DUP_KEY = ON")
+	}
+
+	return options
+}
+
+// String возвращает определение индекса
+func (index Index) String() string {
+	switch index.owner {
+	case OwnerUserDefinedTableDataType:
+		return index.constraintDefinitionForTableType()
+	case OwnerMemoryOptimizedTable:
+		return index.constraintDefinitionForMemoryOptimizedTable()
+	case OwnerAlterTable:
+		return index.constraintDefinitionForAlterTableBlock()
+	default:
+		return index.constraintDefinitionForTable()
+	}
+}
+
+func (index Index) constraintDefinitionForTable() string {
+	var builder str.Builder
+	return builder.String()
+}
+
+func (index Index) constraintDefinitionForTableType() string {
+	var builder str.Builder
+
+	if index.IndexType() == IndexTypePrimaryKey {
+		builder.WriteString("PRIMARY KEY")
+	} else {
+		builder.WriteString("INDEX")
+	}
+
+	builder.WriteSpace()
+	builder.WriteString("[" + index.Name + "]")
+
+	if index.IndexType() == IndexTypeUnique {
+		builder.WriteSpace()
+		builder.WriteString("UNIQUE")
+	}
+
+	if !index.IsNonClustered() {
+		builder.WriteSpace()
+		builder.WriteString(index.Type)
+	}
+
+	columns := index.Columns.Slice()
+
+	if len(columns) > 0 {
+		sort.Slice(columns, func(i, j int) bool {
+			return columns[i].KeyOrdinal < columns[j].KeyOrdinal
+		})
+
+		ct := columns.Join(true, ", ")
+
+		builder.WriteSpace()
+		builder.WriteString("(" + ct + ")")
+	}
+
+	options := index.Options()
+
+	if len(options) > 0 {
+		sort.Strings(options)
+
+		builder.WriteSpace()
+		builder.WriteString(fmt.Sprintf("WITH (%s)", strings.Join(options, ", ")))
+	}
+
+	includedColumns := index.IncludedColumns.Slice()
+
+	if len(includedColumns) > 0 {
+		sort.Slice(includedColumns, func(i, j int) bool {
+			return includedColumns[i].KeyOrdinal < includedColumns[j].KeyOrdinal
+		})
+
+		ict := includedColumns.Join(true, ", ")
+
+		builder.WriteSpace()
+		builder.WriteString("INCLUDE (" + ict + ")")
+	}
+
+	return builder.String()
+}
+
+func (index Index) constraintDefinitionForMemoryOptimizedTable() string {
+	var builder str.Builder
+	return builder.String()
+}
+
+func (index Index) constraintDefinitionForAlterTableBlock() string {
+	var builder str.Builder
+	return builder.String()
+}
+
 // IndexedColumn индексируемые поля
 // (https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-index-columns-transact-sql)
 type IndexedColumn struct {
@@ -115,11 +256,104 @@ type IndexedColumn struct {
 	ColumnStoreOrderOrdinal int
 }
 
+// IndexedColumnsSlice срез индексируемых полей
+type IndexedColumnsSlice []*IndexedColumn
+
+func (columns IndexedColumnsSlice) Join(useBrackets bool, sep string) string {
+	if len(columns) == 0 {
+		return ""
+	}
+
+	col := make([]string, len(columns))
+	var columnName string
+
+	for index, column := range columns {
+		columnName = column.Name
+
+		if useBrackets {
+			columnName = "[" + columnName + "]"
+		}
+
+		if column.IsDescendingKey {
+			col[index] = columnName + " DESC"
+		} else {
+			col[index] = columnName
+		}
+	}
+
+	return strings.Join(col, sep)
+}
+
 // IndexedColumns тип справочника индексируемых полей. Ключ справочника - наименование поля
 type IndexedColumns map[string]*IndexedColumn
 
-// Indexes тип справочника определений индексов объектов БД. Ключ справочника - наименование объекта БД
+// Slice возвращает срез индексируемых полей
+func (columns IndexedColumns) Slice() IndexedColumnsSlice {
+	if len(columns) == 0 {
+		return nil
+	}
+
+	out := make([]*IndexedColumn, len(columns))
+	var i int
+
+	for _, column := range columns {
+		out[i] = column
+		i++
+	}
+
+	return out
+}
+
+// Indexes тип справочника индексов объекта БД. Ключ справочника - наименование индекса
 type Indexes map[string]*Index
+
+// PrimaryKeys справочник первичных ключей объекта БД
+func (indexes Indexes) PrimaryKeys() Indexes {
+	return indexes.filterByIndexType(IndexTypePrimaryKey)
+}
+
+// UniqueIndexes справочник уникальных индексов объекта БД
+func (indexes Indexes) UniqueIndexes() Indexes {
+	return indexes.filterByIndexType(IndexTypeUnique)
+}
+
+// CustomIndexes справочник пользовательских индексов объекта БД
+func (indexes Indexes) CustomIndexes() Indexes {
+	return indexes.filterByIndexType(IndexTypeCustomIndex)
+}
+
+// filterByIndexType возвращает выбранные индексы указанного типа
+func (indexes Indexes) filterByIndexType(indexType IndexType) Indexes {
+	out := make(Indexes)
+
+	for indexName, index := range indexes {
+		if index.IndexType() == indexType {
+			out[indexName] = index
+		}
+	}
+
+	return out
+}
+
+// Slice возвращает срез индексов объекта БД
+func (indexes Indexes) Slice() []*Index {
+	if len(indexes) == 0 {
+		return nil
+	}
+
+	out := make([]*Index, len(indexes))
+	var i int
+
+	for _, index := range indexes {
+		out[i] = index
+		i++
+	}
+
+	return out
+}
+
+// ObjectsIndexes тип справочника определений индексов объектов БД. Ключ справочника - наименование объекта БД
+type ObjectsIndexes map[string]Indexes
 
 // ForeignKey определение внешнего ключа
 type ForeignKey struct {

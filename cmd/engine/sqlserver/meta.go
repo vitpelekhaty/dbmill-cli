@@ -291,8 +291,8 @@ func (meta *MetadataReader) selectIndexesQuery() string {
 	return selectIndexes
 }
 
-// Indexes возвращает справочник индексов из БД, сгруппированных по объектам
-func (meta *MetadataReader) Indexes(ctx context.Context) (Indexes, error) {
+// ObjectsIndexes возвращает справочник индексов из БД, сгруппированных по объектам
+func (meta *MetadataReader) Indexes(ctx context.Context) (ObjectsIndexes, error) {
 	stmt, err := meta.db.PrepareContext(ctx, meta.selectIndexesQuery())
 
 	if err != nil {
@@ -309,7 +309,7 @@ func (meta *MetadataReader) Indexes(ctx context.Context) (Indexes, error) {
 
 	defer rows.Close()
 
-	indexes := make(Indexes)
+	indexes := make(ObjectsIndexes)
 
 	var (
 		catalog                  string
@@ -367,7 +367,11 @@ func (meta *MetadataReader) Indexes(ctx context.Context) (Indexes, error) {
 			ColumnStoreOrderOrdinal: columnStoreOrderOrdinal,
 		}
 
-		if index, ok := indexes[name]; ok {
+		if indexes[name] == nil {
+			indexes[name] = make(Indexes)
+		}
+
+		if index, ok := indexes[name][indexName]; ok {
 			if isIncludedColumn {
 				if _, ok := index.IncludedColumns[columnName]; !ok {
 					index.IncludedColumns[columnName] = column
@@ -408,7 +412,7 @@ func (meta *MetadataReader) Indexes(ctx context.Context) (Indexes, error) {
 				index.Columns[columnName] = column
 			}
 
-			indexes[name] = index
+			indexes[name][indexName] = index
 		}
 	}
 
