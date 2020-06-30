@@ -344,12 +344,13 @@ func (command *ScriptsFolderCommand) databaseObjects(ctx context.Context) (chan 
 					}
 				default:
 					object = &databaseObject{
-						catalog:    catalog,
-						schema:     schema,
-						name:       name,
-						objectType: objectType,
-						definition: definition,
-						owner:      owner,
+						catalog:     catalog,
+						schema:      schema,
+						name:        name,
+						objectType:  objectType,
+						definition:  definition,
+						owner:       owner,
+						description: description,
 					}
 				}
 

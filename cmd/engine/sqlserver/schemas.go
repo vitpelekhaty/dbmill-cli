@@ -56,6 +56,13 @@ func (command *ScriptsFolderCommand) writeSchemaDefinition(ctx context.Context, 
 		}
 	}
 
+	description := obj.Description()
+
+	if strings.Trim(description, " ") != "" {
+		description = fmt.Sprintf(schemaDescription, obj.SchemaAndName(false), description)
+		definition = fmt.Sprintf("%s\n%s", definition, description)
+	}
+
 	obj.SetDefinition([]byte(definition))
 
 	return obj, nil
@@ -65,4 +72,8 @@ const schemaDefinition = `CREATE SCHEMA [%s] AUTHORIZATION [%s]
 GO`
 
 const schemaShortDefinition = `CREATE SCHEMA [%s]
+GO`
+
+const schemaDescription = `
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @level0type = N'SCHEMA', @level0name = N'%s', @value = N'%s'
 GO`
