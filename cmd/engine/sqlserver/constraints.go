@@ -426,8 +426,28 @@ type ColumnReference struct {
 	ReferencedColumn string
 }
 
-// ForeignKeys тип справочника определений внешних ключей. Ключ справочника - наименование объекта БД
+// ForeignKeys тип справочника определений внешних ключей. Ключ справочника - наименование внешнего ключа
 type ForeignKeys map[string]*ForeignKey
+
+// Slice возвращает срез внешних ключей
+func (keys ForeignKeys) Slice() []*ForeignKey {
+	if len(keys) == 0 {
+		return nil
+	}
+
+	out := make([]*ForeignKey, len(keys))
+	var i int
+
+	for _, index := range keys {
+		out[i] = index
+		i++
+	}
+
+	return out
+}
+
+// ObjectsForeignKeys тип справочника определений внешних ключей объектов. Ключ справочника - наименование объекта БД
+type ObjectsForeignKeys map[string]ForeignKeys
 
 const selectIndexes = `
 select indexes.catalog, indexes.[schema], indexes.object_name, indexes.index_name, indexes.index_type,

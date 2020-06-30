@@ -421,8 +421,8 @@ func (meta *MetadataReader) Indexes(ctx context.Context) (ObjectsIndexes, error)
 	return indexes, nil
 }
 
-// ForeignKeys возвращает справочник внешних ключей
-func (meta *MetadataReader) ForeignKeys(ctx context.Context) (ForeignKeys, error) {
+// ObjectsForeignKeys возвращает справочник внешних ключей
+func (meta *MetadataReader) ForeignKeys(ctx context.Context) (ObjectsForeignKeys, error) {
 	stmt, err := meta.db.PrepareContext(ctx, selectForeignKeys)
 
 	if err != nil {
@@ -439,7 +439,7 @@ func (meta *MetadataReader) ForeignKeys(ctx context.Context) (ForeignKeys, error
 
 	defer rows.Close()
 
-	foreignKeys := make(ForeignKeys)
+	foreignKeys := make(ObjectsForeignKeys)
 
 	var (
 		catalog                 string
@@ -478,7 +478,11 @@ func (meta *MetadataReader) ForeignKeys(ctx context.Context) (ForeignKeys, error
 			ReferencedColumn: referencedColumnsName,
 		}
 
-		if fk, ok := foreignKeys[name]; ok {
+		if foreignKeys[name] == nil {
+			foreignKeys[name] = make(ForeignKeys)
+		}
+
+		if fk, ok := foreignKeys[name][foreignKeyName]; ok {
 			if _, ok := fk.ColumnsReferences[parentColumnName]; !ok {
 				fk.ColumnsReferences[parentColumnName] = columnReference
 			}
@@ -498,7 +502,7 @@ func (meta *MetadataReader) ForeignKeys(ctx context.Context) (ForeignKeys, error
 
 			fk.ColumnsReferences[parentColumnName] = columnReference
 
-			foreignKeys[name] = fk
+			foreignKeys[name][foreignKeyName] = fk
 		}
 	}
 
