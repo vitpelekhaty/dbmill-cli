@@ -10,6 +10,20 @@ import (
 	"github.com/vitpelekhaty/dbmill-cli/internal/pkg/output"
 )
 
+type descriptionCallback func() string
+
+const procedureDescription = `
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @level0type = N'SCHEMA', @level0name = N'%s', @level1type = N'PROCEDURE', @level0name = N'%s', @value = N'%s'
+GO`
+
+const functionDescription = `
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @level0type = N'SCHEMA', @level0name = N'%s', @level1type = N'FUNCTION', @level0name = N'%s', @value = N'%s'
+GO`
+
+const viewDescription = `
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @level0type = N'SCHEMA', @level0name = N'%s', @level1type = N'VIEW', @level0name = N'%s', @value = N'%s'
+GO`
+
 func (command *ScriptsFolderCommand) writeProcedureDefinition(ctx context.Context, object interface{}) (interface{},
 	error) {
 	obj, ok := object.(ISQLModule)
@@ -22,7 +36,15 @@ func (command *ScriptsFolderCommand) writeProcedureDefinition(ctx context.Contex
 		return object, fmt.Errorf("object %s is not a procedure", obj.SchemaAndName(true))
 	}
 
-	return command.writeModuleDefinition(ctx, obj)
+	return command.writeModuleDefinition(ctx, obj, func() string {
+		description := obj.Description()
+
+		if strings.Trim(description, " ") == "" {
+			return ""
+		}
+
+		return fmt.Sprintf(procedureDescription, obj.Schema(), obj.Name(), obj.Description())
+	})
 }
 
 func (command *ScriptsFolderCommand) writeFunctionDefinition(ctx context.Context, object interface{}) (interface{},
@@ -37,7 +59,15 @@ func (command *ScriptsFolderCommand) writeFunctionDefinition(ctx context.Context
 		return object, fmt.Errorf("object %s is not a function", obj.SchemaAndName(true))
 	}
 
-	return command.writeModuleDefinition(ctx, obj)
+	return command.writeModuleDefinition(ctx, obj, func() string {
+		description := obj.Description()
+
+		if strings.Trim(description, " ") == "" {
+			return ""
+		}
+
+		return fmt.Sprintf(functionDescription, obj.Schema(), obj.Name(), obj.Description())
+	})
 }
 
 func (command *ScriptsFolderCommand) writeViewDefinition(ctx context.Context, object interface{}) (interface{},
@@ -52,7 +82,15 @@ func (command *ScriptsFolderCommand) writeViewDefinition(ctx context.Context, ob
 		return object, fmt.Errorf("object %s is not a view", obj.SchemaAndName(true))
 	}
 
-	return command.writeModuleDefinition(ctx, obj)
+	return command.writeModuleDefinition(ctx, obj, func() string {
+		description := obj.Description()
+
+		if strings.Trim(description, " ") == "" {
+			return ""
+		}
+
+		return fmt.Sprintf(viewDescription, obj.Schema(), obj.Name(), obj.Description())
+	})
 }
 
 func (command *ScriptsFolderCommand) writeTriggerDefinition(ctx context.Context, object interface{}) (interface{},
@@ -67,10 +105,11 @@ func (command *ScriptsFolderCommand) writeTriggerDefinition(ctx context.Context,
 		return object, fmt.Errorf("object %s is not a DDL trigger", obj.SchemaAndName(true))
 	}
 
-	return command.writeModuleDefinition(ctx, obj)
+	return command.writeModuleDefinition(ctx, obj, nil)
 }
 
-func (command *ScriptsFolderCommand) writeModuleDefinition(ctx context.Context, object ISQLModule) (ISQLModule, error) {
+func (command *ScriptsFolderCommand) writeModuleDefinition(ctx context.Context, object ISQLModule,
+	descriptionCallback descriptionCallback) (ISQLModule, error) {
 	definition := string(object.Definition())
 
 	if strings.Trim(definition, " ") == "" {
@@ -119,6 +158,14 @@ func (command *ScriptsFolderCommand) writeModuleDefinition(ctx context.Context, 
 					}
 				}
 			}
+		}
+	}
+
+	if descriptionCallback != nil {
+		description := descriptionCallback()
+
+		if strings.Trim(description, " ") != "" {
+			definition = fmt.Sprintf("%s\n%s", definition, description)
 		}
 	}
 

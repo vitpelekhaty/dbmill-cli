@@ -18,8 +18,8 @@ type IDatabaseObject interface {
 	Definition() []byte
 	// SetDefinition записывает новое определение объекта БД
 	SetDefinition(data []byte)
-	// DefinitionExists проверяет наличие определения у объекта БД
-	DefinitionExists() bool
+	// HasDefinition проверяет наличие определения у объекта БД
+	HasDefinition() bool
 	// Type возвращает тип объекта БД
 	Type() output.DatabaseObjectType
 	// SchemaAndName возвращает наименование объекта в формате %Schema%.%name%
@@ -106,8 +106,8 @@ func (object *databaseObject) SetDefinition(data []byte) {
 	}
 }
 
-// DefinitionExists проверяет наличие определения у объекта БД
-func (object databaseObject) DefinitionExists() bool {
+// HasDefinition проверяет наличие определения у объекта БД
+func (object databaseObject) HasDefinition() bool {
 	if !object.definition.Valid {
 		return false
 	}
