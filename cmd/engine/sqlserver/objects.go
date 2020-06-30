@@ -26,6 +26,8 @@ type IDatabaseObject interface {
 	SchemaAndName(useBrackets bool) string
 	// Owner возвращает владельца объекта БД
 	Owner() string
+	// Description возвращает описание объекта БД
+	Description() string
 }
 
 // ISQLModule интерфейс SQL модуля (процедура, скалярная/табличная функция, представление, триггер...)
@@ -56,6 +58,8 @@ type databaseObject struct {
 	definition sql.NullString
 	// owner владелец объекта БД
 	owner sql.NullString
+	// description описание объекта БД
+	description sql.NullString
 }
 
 // Catalog наименование базы данных
@@ -155,6 +159,15 @@ func (object databaseObject) SchemaAndName(useBrackets bool) string {
 func (object databaseObject) Owner() string {
 	if object.owner.Valid {
 		return object.owner.String
+	}
+
+	return ""
+}
+
+// Description описание объекта БД
+func (object databaseObject) Description() string {
+	if object.description.Valid {
+		return object.description.String
 	}
 
 	return ""

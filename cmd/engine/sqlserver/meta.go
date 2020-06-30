@@ -341,6 +341,7 @@ func (meta *MetadataReader) Indexes(ctx context.Context) (ObjectsIndexes, error)
 		partitionOrdinal         int
 		columnStoreOrderOrdinal  int
 		bucketCount              sql.NullInt64
+		description              sql.NullString
 
 		name string
 	)
@@ -350,7 +351,7 @@ func (meta *MetadataReader) Indexes(ctx context.Context) (ObjectsIndexes, error)
 			&isUniqueConstraint, &ignoreDupKey, &fillFactor, &isPadded, &isDisabled, &isHypothetical,
 			&isIgnoredInOptimization, &allowRowLocks, &allowPageLocks, &suppressDupKeyMessages, &autoCreated,
 			&optimizeForSequentialKey, &hasFilter, &filterDefinition, &indexColumnID, &columnName, &isDescendingKey,
-			&isIncludedColumn, &keyOrdinal, &partitionOrdinal, &columnStoreOrderOrdinal, &bucketCount)
+			&isIncludedColumn, &keyOrdinal, &partitionOrdinal, &columnStoreOrderOrdinal, &bucketCount, &description)
 
 		if err != nil {
 			return nil, err
@@ -404,6 +405,7 @@ func (meta *MetadataReader) Indexes(ctx context.Context) (ObjectsIndexes, error)
 				hasFilter:                hasFilter,
 				filterDefinition:         filterDefinition,
 				bucketCount:              bucketCount,
+				description:              description,
 			}
 
 			if isIncludedColumn {
@@ -454,6 +456,7 @@ func (meta *MetadataReader) ForeignKeys(ctx context.Context) (ForeignKeys, error
 		isNotTrusted            bool
 		deleteReferentialAction string
 		updateReferentialAction string
+		description             sql.NullString
 
 		name string
 	)
@@ -461,7 +464,7 @@ func (meta *MetadataReader) ForeignKeys(ctx context.Context) (ForeignKeys, error
 	for rows.Next() {
 		err = rows.Scan(&catalog, &foreignKeyName, &constraintColumnID, &parentObjectSchema, &parentObjectName,
 			&parentColumnName, &referencedObjectSchema, &referencedObjectName, &referencedColumnsName, &isDisabled,
-			&isNotForReplication, &isNotTrusted, &deleteReferentialAction, &updateReferentialAction)
+			&isNotForReplication, &isNotTrusted, &deleteReferentialAction, &updateReferentialAction, &description)
 
 		if err != nil {
 			return nil, err
@@ -490,6 +493,7 @@ func (meta *MetadataReader) ForeignKeys(ctx context.Context) (ForeignKeys, error
 				DeleteReferentialAction: deleteReferentialAction,
 				UpdateReferentialAction: updateReferentialAction,
 				ColumnsReferences:       make(map[string]*ColumnReference),
+				description:             description,
 			}
 
 			fk.ColumnsReferences[parentColumnName] = columnReference

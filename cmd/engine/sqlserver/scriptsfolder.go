@@ -311,13 +311,14 @@ func (command *ScriptsFolderCommand) databaseObjects(ctx context.Context) (chan 
 			owner                sql.NullString
 			usesANSINulls        sql.NullBool
 			usesQuotedIdentifier sql.NullBool
+			description          sql.NullString
 		)
 
 		var objType string
 
 		for rows.Next() {
 			err = rows.Scan(&catalog, &schema, &name, &objectType, &definition, &owner, &usesANSINulls,
-				&usesQuotedIdentifier)
+				&usesQuotedIdentifier, &description)
 
 			if err == nil {
 				if objectType.Valid {
@@ -330,12 +331,13 @@ func (command *ScriptsFolderCommand) databaseObjects(ctx context.Context) (chan 
 				case "FUNCTION", "PROCEDURE", "TRIGGER", "VIEW":
 					object = &module{
 						databaseObject: databaseObject{
-							catalog:    catalog,
-							schema:     schema,
-							name:       name,
-							objectType: objectType,
-							definition: definition,
-							owner:      owner,
+							catalog:     catalog,
+							schema:      schema,
+							name:        name,
+							objectType:  objectType,
+							definition:  definition,
+							owner:       owner,
+							description: description,
 						},
 						usesANSINulls:        usesANSINulls,
 						usesQuotedIdentifier: usesQuotedIdentifier,
@@ -362,120 +364,144 @@ func (command *ScriptsFolderCommand) databaseObjects(ctx context.Context) (chan 
 }
 
 const selectObjects = `
-select info.Catalog, info.[Schema], info.name, info.type, info.definition,
-       info.owner, info.uses_quoted_identifier, info.uses_ansi_nulls
+select info.catalog, info.[schema], info.name, info.type, info.definition,
+       info.owner, info.uses_quoted_identifier, info.uses_ansi_nulls, info.description
 from (
     select
         [order] = 1,
-        [Catalog] = schemas.CATALOG_NAME,
-        [Schema] = schemas.SCHEMA_NAME,
+        [catalog] = schemas.CATALOG_NAME,
+        [schema] = schemas.SCHEMA_NAME,
         [name] = null,
         [type] = N'SCHEMA',
         [definition] = null,
         [owner] = isnull(users.name, schemas.SCHEMA_OWNER),
         [uses_ansi_nulls] = null,
-        [uses_quoted_identifier] = null
+        [uses_quoted_identifier] = null,
+        [description] = cast(prop.value as nvarchar(2048))
     from INFORMATION_SCHEMA.SCHEMATA as schemas
         inner join sys.schemas as ss on (schemas.SCHEMA_NAME = ss.name)
             inner join sys.sysusers as users on (ss.principal_id = users.uid) and (users.hasdbaccess != 0)
+            left join sys.extended_properties as prop on (ss.schema_id = prop.major_id) and (prop.minor_id = 0)
+                and (prop.class = 3) and (prop.name = 'MS_Description')
     union
     select
         [order] = 2,
-        [Catalog] = db_name(),
-        [Schema] = schema_name(types.schema_id),
+        [catalog] = db_name(),
+        [schema] = schema_name(types.schema_id),
         [name] = types.name,
         [type] = N'DATA TYPE',
         [definition] = null,
         [owner] = null,
         [uses_ansi_nulls] = null,
-        [uses_quoted_identifier] = null
+        [uses_quoted_identifier] = null,
+        [description] = cast(prop.value as nvarchar(2048))
     from sys.types as types
+        left join sys.extended_properties as prop on (types.user_type_id = prop.major_id) and (prop.minor_id = 0)
+            and (prop.class = 6) and (prop.name = 'MS_Description')
     where (types.is_user_defined != cast(0 as bit)) and (types.is_table_type = cast(0 as bit))
     union
     select
         [order] = 2,
-        [Catalog] = db_name(),
-        [Schema] = schema_name(types.schema_id),
+        [catalog] = db_name(),
+        [schema] = schema_name(types.schema_id),
         [name] = types.name,
         [type] = N'TABLE TYPE',
         [definition] = null,
         [owner] = null,
         [uses_ansi_nulls] = null,
-        [uses_quoted_identifier] = null
+        [uses_quoted_identifier] = null,
+        [description] = cast(prop.value as nvarchar(2048))
     from sys.types as types
+        left join sys.extended_properties as prop on (types.user_type_id = prop.major_id) and (prop.minor_id = 0)
+            and (prop.class = 6) and (prop.name = 'MS_Description')
     where (types.is_user_defined != cast(0 as bit)) and (types.is_table_type != cast(0 as bit))
     union
     select
         [order] = 3,
-        [Catalog] = tables.TABLE_CATALOG,
-        [Schema] = isnull(schema_name(objects.schema_id), tables.TABLE_SCHEMA),
+        [catalog] = tables.TABLE_CATALOG,
+        [schema] = isnull(schema_name(objects.schema_id), tables.TABLE_SCHEMA),
         [name] = tables.TABLE_NAME,
         [type] = tables.TABLE_TYPE,
         [definition] = null,
         [owner] = null,
         [uses_ansi_nulls] = null,
-        [uses_quoted_identifier] = null
+        [uses_quoted_identifier] = null,
+        [description] = cast(prop.value as nvarchar(2048))
     from INFORMATION_SCHEMA.TABLES as tables
         inner join sys.objects as objects on (tables.TABLE_NAME = objects.name)
+            left join sys.extended_properties as prop on (objects.object_id = prop.major_id) and (prop.minor_id = 0)
+                and (prop.class = 1) and (prop.name = 'MS_Description')
     where tables.TABLE_TYPE = N'BASE TABLE'
     union
     select
         [order] = 4,
-        [Catalog] = views.TABLE_CATALOG,
-        [Schema] = isnull(schema_name(objects.schema_id), views.TABLE_SCHEMA),
+        [catalog] = views.TABLE_CATALOG,
+        [schema] = isnull(schema_name(objects.schema_id), views.TABLE_SCHEMA),
         [name] = views.TABLE_NAME,
         [type] = N'VIEW',
         [definition] = isnull(object_definition(objects.object_id), views.VIEW_DEFINITION),
         [owner] = null,
         [uses_ansi_nulls] = modules.uses_ansi_nulls,
-        [uses_quoted_identifier] = modules.uses_quoted_identifier
+        [uses_quoted_identifier] = modules.uses_quoted_identifier,
+        [description] = cast(prop.value as nvarchar(2048))
     from INFORMATION_SCHEMA.VIEWS as views
         inner join sys.objects as objects on (views.TABLE_NAME = objects.name)
             inner join sys.sql_modules as modules on (objects.object_id = modules.object_id)
+            left join sys.extended_properties as prop on (objects.object_id = prop.major_id) and (prop.minor_id = 0)
+                and (prop.class = 1) and (prop.name = 'MS_Description')
     union
     select
         [order] = 5,
-        [Catalog] = db_name(),
-        [Schema] = schema_name(objects.schema_id),
+        [catalog] = db_name(),
+        [schema] = schema_name(objects.schema_id),
         [name] = objects.name,
         [type] = N'TRIGGER',
         [definition] = object_definition(objects.object_id),
         [owner] = null,
         [uses_ansi_nulls] = modules.uses_ansi_nulls,
-        [uses_quoted_identifier] = modules.uses_quoted_identifier
+        [uses_quoted_identifier] = modules.uses_quoted_identifier,
+        [description] = cast(prop.value as nvarchar(2048))
     from sys.objects as objects
         inner join sys.sql_modules as modules on (objects.object_id = modules.object_id)
+        left join sys.extended_properties as prop on (objects.object_id = prop.major_id) and (prop.minor_id = 0)
+            and (prop.class = 1) and (prop.name = 'MS_Description')
     where objects.type = 'TR'
     union
     select
         [order] = 6,
-        [Catalog] = functions.ROUTINE_CATALOG,
-        [Schema] = isnull(schema_name(objects.schema_id), functions.ROUTINE_SCHEMA),
+        [catalog] = functions.ROUTINE_CATALOG,
+        [schema] = isnull(schema_name(objects.schema_id), functions.ROUTINE_SCHEMA),
         [name] = functions.ROUTINE_NAME,
         [type] = functions.ROUTINE_TYPE,
         [definition] = isnull(object_definition(objects.object_id), functions.ROUTINE_DEFINITION),
         [owner] = null,
         [uses_ansi_nulls] = modules.uses_ansi_nulls,
-        [uses_quoted_identifier] = modules.uses_quoted_identifier
+        [uses_quoted_identifier] = modules.uses_quoted_identifier,
+        [description] = cast(prop.value as nvarchar(2048))
     from INFORMATION_SCHEMA.ROUTINES as functions
         inner join sys.objects as objects on (functions.ROUTINE_NAME = objects.name)
             inner join sys.sql_modules as modules on (objects.object_id = modules.object_id)
+            left join sys.extended_properties as prop on (objects.object_id = prop.major_id) and (prop.minor_id = 0)
+                and (prop.class = 1) and (prop.name = 'MS_Description')
     where functions.ROUTINE_TYPE = N'FUNCTION'
     union
     select
         [order] = 7,
-        [Catalog] = procedures.ROUTINE_CATALOG,
-        [Schema] = isnull(schema_name(objects.schema_id), procedures.ROUTINE_SCHEMA),
+        [catalog] = procedures.ROUTINE_CATALOG,
+        [schema] = isnull(schema_name(objects.schema_id), procedures.ROUTINE_SCHEMA),
         [name] = procedures.ROUTINE_NAME,
         [type] = procedures.ROUTINE_TYPE,
         [definition] = isnull(object_definition(objects.object_id), procedures.ROUTINE_DEFINITION),
         [owner] = null,
         [uses_ansi_nulls] = modules.uses_ansi_nulls,
-        [uses_quoted_identifier] = modules.uses_quoted_identifier
+        [uses_quoted_identifier] = modules.uses_quoted_identifier,
+        [description] = cast(prop.value as nvarchar(2048))
     from INFORMATION_SCHEMA.ROUTINES as procedures
         inner join sys.objects as objects on (procedures.ROUTINE_NAME = objects.name)
             inner join sys.sql_modules as modules on (objects.object_id = modules.object_id)
+            left join sys.extended_properties as prop on (objects.object_id = prop.major_id) and (prop.minor_id = 0)
+                and (prop.class = 1) and (prop.name = 'MS_Description')
     where procedures.ROUTINE_TYPE = N'PROCEDURE'
 ) as info
-order by info.Catalog, info.[order], info.type, info.[Schema], info.name
+order by info.catalog, info.[order], info.type, info.[schema], info.name
 `

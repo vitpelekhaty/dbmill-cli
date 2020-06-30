@@ -74,6 +74,7 @@ type Index struct {
 	hasFilter        bool
 	filterDefinition sql.NullString
 	bucketCount      sql.NullInt64
+	description      sql.NullString
 
 	owner ColumnOrIndexOwner
 }
@@ -99,6 +100,20 @@ func (index Index) FilterDefinition() string {
 	}
 
 	return ""
+}
+
+// Description описание индекса
+func (index Index) Description() string {
+	if index.description.Valid {
+		return index.description.String
+	}
+
+	return ""
+}
+
+// HasDescription проверяет, есть ли у индекса описание
+func (index Index) HasDescription() bool {
+	return index.description.Valid
 }
 
 // IndexType тип индекса
@@ -382,6 +397,23 @@ type ForeignKey struct {
 	UpdateReferentialAction string
 	// ColumnsReferences ссылки ключевых полей
 	ColumnsReferences map[string]*ColumnReference
+
+	// description описание внешнего ключа
+	description sql.NullString
+}
+
+// HasDescription проверяет наличие описания о внешнего ключа
+func (fk ForeignKey) HasDescription() bool {
+	return fk.description.Valid
+}
+
+// Description описание внешнего ключа
+func (fk ForeignKey) Description() string {
+	if fk.description.Valid {
+		return fk.description.String
+	}
+
+	return ""
 }
 
 // ColumnReference ссылка поля на поле внешнего объекта
@@ -405,7 +437,7 @@ select indexes.catalog, indexes.[schema], indexes.object_name, indexes.index_nam
     indexes.suppress_dup_key_messages, indexes.auto_created, indexes.optimize_for_sequential_key, indexes.has_filter,
     indexes.filter_definition, indexes.index_column_id, indexes.column_name, indexes.is_descending_key,
     indexes.is_included_column, indexes.key_ordinal, indexes.partition_ordinal, indexes.column_store_order_ordinal,
-    indexes.bucket_count
+    indexes.bucket_count, indexes.description
 from (
     select
         [catalog] = db_name(),
@@ -438,12 +470,15 @@ from (
         [key_ordinal] = index_columns.key_ordinal,
         [partition_ordinal] = index_columns.partition_ordinal,
         [column_store_order_ordinal] = index_columns.column_store_order_ordinal,
-        [bucket_count] = hash_indexes.bucket_count
+        [bucket_count] = hash_indexes.bucket_count,
+        [description] = cast(prop.value as nvarchar(2048))
 
     from sys.indexes as indexes
         inner join sys.objects as objects on (indexes.object_id = objects.object_id)
             and (objects.type in ('U', 'V', 'TF', 'TT'))
             left join sys.table_types as table_types on (objects.object_id = table_types.type_table_object_id)
+            left join sys.extended_properties as prop on (objects.object_id = prop.major_id)
+                and (prop.minor_id = indexes.index_id) and (prop.name = 'MS_Description') and (prop.class = 7)
         inner join sys.index_columns as index_columns on (indexes.object_id = index_columns.object_id)
             and (indexes.index_id = index_columns.index_id)
             inner join sys.columns as columns on (index_columns.object_id = columns.object_id)
@@ -451,14 +486,13 @@ from (
         left join sys.hash_indexes as hash_indexes on (indexes.object_id = hash_indexes.object_id)
             and (indexes.index_id = hash_indexes.index_id)
 ) as indexes
-order by indexes.catalog, indexes.[schema], indexes.object_name, indexes.index_id, indexes.index_column_id
-`
+order by indexes.catalog, indexes.[schema], indexes.object_name, indexes.index_id, indexes.index_column_id`
 
 const selectForeignKeys = `
 select fk.catalog, fk.foreign_key_name, fk.constraint_column_id, fk.parent_object_schema, fk.parent_object_name,
     fk.parent_column_name, fk.referenced_object_schema, fk.referenced_object_name, fk.referenced_columns_name,
     fk.is_disabled, fk.is_not_for_replication, fk.is_not_trusted, fk.delete_referential_action,
-    fk.update_referential_action
+    fk.update_referential_action, fk.description
 from (
     select
         [catalog] = db_name(),
@@ -485,11 +519,14 @@ from (
             when 2 then 'SET NULL'
             when 3 then 'SET DEFAULT'
             else 'NO ACTION'
-        end
+        end,
+        [description] = cast(prop.value as nvarchar(2048))
 
     from sys.foreign_key_columns as fk_columns
         inner join sys.objects as constraint_objects on (fk_columns.constraint_object_id = constraint_objects.object_id)
             inner join sys.foreign_keys as fk on (constraint_objects.object_id = fk.object_id)
+                left join sys.extended_properties as prop on (fk.object_id = prop.major_id)
+                    and (prop.minor_id = fk.key_index_id) and (prop.name = 'MS_Description') and (prop.class = 7)
         inner join sys.columns as parent_columns on (fk_columns.parent_object_id = parent_columns.object_id)
             and (fk_columns.parent_column_id = parent_columns.column_id)
             inner join sys.objects as parent_objects on (parent_columns.object_id = parent_objects.object_id)
