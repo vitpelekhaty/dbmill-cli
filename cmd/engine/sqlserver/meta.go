@@ -277,7 +277,8 @@ func (meta *MetadataReader) DatabaseCollation(ctx context.Context) (string, erro
 }
 
 var selectIndexesQueries = map[int]string{
-	15: selectIndexes,
+	13: selectIndexes2016,
+	15: selectIndexes2019,
 }
 
 // selectIndexesQuery возвращает текст запроса набора индексов для соответствующей версии SQL Server.
@@ -288,7 +289,7 @@ func (meta *MetadataReader) selectIndexesQuery() string {
 		return query
 	}
 
-	return selectIndexes
+	return selectIndexes2016
 }
 
 // ObjectsIndexes возвращает справочник индексов из БД, сгруппированных по объектам
