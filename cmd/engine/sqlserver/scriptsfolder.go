@@ -148,6 +148,8 @@ func (command *ScriptsFolderCommand) writeDefinition(ctx context.Context, object
 		return command.writeTriggerDefinition(ctx, obj)
 	case output.UserDefinedTableType, output.UserDefinedDataType:
 		return command.writeDomainDefinition(ctx, obj)
+	case output.Table:
+		return command.writeTableDefinition(ctx, obj)
 	}
 
 	return object, nil

@@ -1,7 +1,12 @@
 package sqlserver
 
 import (
+	"context"
 	"database/sql"
+	"errors"
+	"fmt"
+
+	"github.com/vitpelekhaty/dbmill-cli/internal/pkg/output"
 )
 
 // DataSpace пространство данных
@@ -131,6 +136,65 @@ func (table Table) HistoryTableName() string {
 
 // Tables тип коллекции таблиц в БД
 type Tables map[string]*Table
+
+// TableDefinition определение таблицы
+type TableDefinition struct {
+	// Table параметры таблицы
+	Table *Table
+	// Columns поля таблицы
+	Columns Columns
+	// Indexes индексы
+	Indexes Indexes
+	// ForeignKeys внешние ключи
+	ForeignKeys ForeignKeys
+	// Permissions разрешения
+	Permissions UserPerms
+}
+
+// String возвращает скрипт определения таблицы. В случае возникновения ошибки при создании текста определения таблицы
+// возвращает пустую строку
+func (definition *TableDefinition) String() string {
+	value, _ := definition.Value()
+	return value
+}
+
+// Value возвращает скрипт определения таблицы. В случае возникновения ошибки при создании текста определения таблицы
+// возвращает пустую строку и описание ошибки
+func (definition *TableDefinition) Value() (string, error) {
+	return "", nil
+}
+
+func (command *ScriptsFolderCommand) writeTableDefinition(ctx context.Context, object interface{}) (interface{}, error) {
+	obj, ok := object.(IDatabaseObject)
+
+	if !ok {
+		return object, errors.New("object is not a database object")
+	}
+
+	name := obj.SchemaAndName(true)
+
+	if obj.Type() != output.Table {
+		return object, fmt.Errorf("object %s is not a table", name)
+	}
+
+	definition := &TableDefinition{
+		Table:       command.tables[name],
+		Columns:     command.columns[name],
+		Indexes:     command.indexes[name],
+		ForeignKeys: command.foreignKeys[name],
+		Permissions: command.permissions[name],
+	}
+
+	value, err := definition.Value()
+
+	if err != nil {
+		return obj, err
+	}
+
+	obj.SetDefinition([]byte(value))
+
+	return obj, nil
+}
 
 const (
 	selectTables2019 = `
