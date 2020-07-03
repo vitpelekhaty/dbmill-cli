@@ -56,10 +56,6 @@ type Table struct {
 	IsMemoryOptimized bool
 	// TemporalType тип таблицы (NON_TEMPORAL_TABLE | HISTORY_TABLE | SYSTEM_VERSIONED_TEMPORAL_TABLE)
 	TemporalType string
-	// HistoryTableSchema
-	HistoryTableSchema string
-	// HistoryTableName
-	HistoryTableName string
 	// IsRemoteDataArchiveEnabled
 	IsRemoteDataArchiveEnabled bool
 	// IsExternal внешняя таблица
@@ -70,6 +66,8 @@ type Table struct {
 	IsEdge bool
 
 	fileStreamDataSpace        sql.NullString
+	historyTableSchema         sql.NullString
+	historyTableName           sql.NullString
 	historyRetentionPeriod     sql.NullInt32
 	historyRetentionPeriodUnit sql.NullString
 }
@@ -108,6 +106,24 @@ func (table Table) HasHistoryRetentionPeriodUnit() bool {
 func (table Table) HistoryRetentionPeriodUnit() string {
 	if table.historyRetentionPeriodUnit.Valid {
 		return table.historyRetentionPeriodUnit.String
+	}
+
+	return ""
+}
+
+// HistoryTableSchema
+func (table Table) HistoryTableSchema() string {
+	if table.historyTableSchema.Valid {
+		return table.historyTableSchema.String
+	}
+
+	return ""
+}
+
+// HistoryTableName
+func (table Table) HistoryTableName() string {
+	if table.historyTableName.Valid {
+		return table.historyTableName.String
 	}
 
 	return ""

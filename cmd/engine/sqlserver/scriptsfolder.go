@@ -29,6 +29,7 @@ type ScriptsFolderCommand struct {
 	columns          ObjectColumns
 	indexes          ObjectsIndexes
 	foreignKeys      ObjectsForeignKeys
+	tables           Tables
 
 	databaseCollation string
 }
@@ -53,6 +54,7 @@ func NewScriptsFolderCommand(engine *Engine, options ...commands.ScriptsFolderOp
 		columns:          nil,
 		indexes:          nil,
 		foreignKeys:      nil,
+		tables:           nil,
 
 		databaseCollation: "",
 	}
@@ -199,6 +201,14 @@ func (command *ScriptsFolderCommand) ReadMetadata(ctx context.Context) error {
 	}
 
 	command.foreignKeys = foreignKeys
+
+	tables, err := command.metaReader.Tables(ctx)
+
+	if err != nil {
+		return err
+	}
+
+	command.tables = tables
 
 	return nil
 }

@@ -537,5 +537,111 @@ func (meta *MetadataReader) Tables(ctx context.Context) (Tables, error) {
 
 	defer stmt.Close()
 
-	return nil, nil
+	rows, err := stmt.QueryContext(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	tables := make(Tables)
+
+	var (
+		catalog                    string
+		schema                     string
+		name                       string
+		lobDataSpace               sql.NullString
+		lobDataSpaceType           sql.NullString
+		isDefaultDataSpace         sql.NullBool
+		fileStreamDataSpace        sql.NullString
+		lockOnBulkLoad             bool
+		usesANSINulls              bool
+		isReplicated               bool
+		hasReplicationFilter       bool
+		isMergePublished           bool
+		isSyncTranSubscribed       bool
+		hasUncheckedAssemblyData   bool
+		textInRowLimit             int
+		largeValueTypesOutOfRow    bool
+		isTrackedByCDC             bool
+		lockEscalation             string
+		isFileTable                bool
+		durability                 string
+		isMemoryOptimized          bool
+		temporalType               string
+		historyTableSchema         sql.NullString
+		historyTableName           sql.NullString
+		isRemoteDataArchiveEnabled bool
+		isExternal                 bool
+		historyRetentionPeriod     sql.NullInt32
+		historyRetentionPeriodUnit sql.NullString
+		isNode                     bool
+		isEdge                     bool
+
+		dataSpace *DataSpace
+		tableName string
+	)
+
+	for rows.Next() {
+		err = rows.Scan(&catalog, &schema, &name, &lobDataSpace, &lobDataSpaceType, &isDefaultDataSpace,
+			&fileStreamDataSpace, &lockOnBulkLoad, &usesANSINulls, &isReplicated, &hasReplicationFilter,
+			&isMergePublished, &isSyncTranSubscribed, &hasUncheckedAssemblyData, &textInRowLimit,
+			&largeValueTypesOutOfRow, &isTrackedByCDC, &lockEscalation, &isFileTable, &durability, &isMemoryOptimized,
+			&temporalType, &historyTableSchema, &historyTableName, &isRemoteDataArchiveEnabled, &isExternal,
+			&historyRetentionPeriod, &historyRetentionPeriodUnit, &isNode, &isEdge)
+
+		if err != nil {
+			return nil, err
+		}
+
+		tableName = SchemaAndObject(schema, name, true)
+		dataSpace = nil
+
+		if lobDataSpace.Valid {
+			dataSpace = &DataSpace{Name: lobDataSpace.String}
+
+			if lobDataSpaceType.Valid {
+				dataSpace.Type = lobDataSpaceType.String
+			}
+
+			if isDefaultDataSpace.Valid {
+				dataSpace.IsDefault = isDefaultDataSpace.Bool
+			}
+		}
+
+		table := &Table{
+			Catalog:                    catalog,
+			Schema:                     schema,
+			Name:                       name,
+			LOBDataSpace:               dataSpace,
+			LockOnBulkLoad:             lockOnBulkLoad,
+			UsesANSINulls:              usesANSINulls,
+			IsReplicated:               isReplicated,
+			HasReplicationFilter:       hasReplicationFilter,
+			IsMergePublished:           isMergePublished,
+			IsSyncTranSubscribed:       isSyncTranSubscribed,
+			HasUncheckedAssemblyData:   hasUncheckedAssemblyData,
+			TextInRowLimit:             textInRowLimit,
+			LargeValueTypesOutOfRow:    largeValueTypesOutOfRow,
+			IsTrackedByCDC:             isTrackedByCDC,
+			LockEscalation:             lockEscalation,
+			IsFileTable:                isFileTable,
+			Durability:                 durability,
+			IsMemoryOptimized:          isMemoryOptimized,
+			TemporalType:               temporalType,
+			IsRemoteDataArchiveEnabled: isRemoteDataArchiveEnabled,
+			IsExternal:                 isExternal,
+			IsNode:                     isNode,
+			IsEdge:                     isEdge,
+
+			fileStreamDataSpace:        fileStreamDataSpace,
+			historyTableSchema:         historyTableSchema,
+			historyTableName:           historyTableName,
+			historyRetentionPeriod:     historyRetentionPeriod,
+			historyRetentionPeriodUnit: historyRetentionPeriodUnit,
+		}
+
+		tables[tableName] = table
+	}
+
+	return tables, nil
 }
