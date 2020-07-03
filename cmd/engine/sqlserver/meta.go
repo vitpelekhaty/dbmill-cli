@@ -509,3 +509,33 @@ func (meta *MetadataReader) ForeignKeys(ctx context.Context) (ObjectsForeignKeys
 
 	return foreignKeys, nil
 }
+
+var selectTablesQueries = map[int]string{
+	13: selectTables2016,
+	14: selectTables2017,
+	15: selectTables2019,
+}
+
+// selectTablesQuery возвращает текст запроса набора таблиц для соответствующей версии SQL Server.
+// Если для указанной версии нет варианта текста запроса, то возвращается текст для минимальной поддерживаемой
+// версии
+func (meta *MetadataReader) selectTablesQuery() string {
+	if query, ok := selectTablesQueries[meta.serverVersion]; ok {
+		return query
+	}
+
+	return selectTables2016
+}
+
+// Tables возвращает коллекцию пользовтельских таблиц, имеющихся в БД
+func (meta *MetadataReader) Tables(ctx context.Context) (Tables, error) {
+	stmt, err := meta.db.PrepareContext(ctx, meta.selectTablesQuery())
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer stmt.Close()
+
+	return nil, nil
+}
