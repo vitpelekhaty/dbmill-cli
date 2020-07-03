@@ -365,24 +365,29 @@ func (command *ScriptsFolderCommand) databaseObjects(ctx context.Context) (chan 
 }
 
 const selectObjects = `
-with tableTypes (object_id, name) as (
-    select table_types.type_table_object_id as object_id, types.name
+with tableTypes (object_id, schema_id, name) as (
+    select table_types.type_table_object_id as object_id, types.schema_id, types.name
     from sys.types as types
         inner join sys.table_types as table_types on (types.user_type_id = table_types.user_type_id)
     where (types.is_table_type != cast(0 as bit)) and (types.is_user_defined != cast(0 as bit))
 ),
+extendedProperties (object_id, description, class) as (
+    select props.major_id as object_id, cast(props.value as nvarchar(2048)) as description, props.class
+    from sys.extended_properties as props
+    where (name = N'MS_Description') and (props.minor_id = 0)
+),
 objectDescriptions (object_id, description, class) as (
-    select props.major_id as object_id, cast(props.value as nvarchar(2048)) as description, props.class
-    from sys.extended_properties as props
-    where (props.class = 1) and (name = N'MS_Description') and (props.minor_id = 0)
+    select props.object_id,  props.description, props.class
+    from extendedProperties as props
+    where (props.class = 1)
     union
-    select props.major_id as object_id, cast(props.value as nvarchar(2048)) as description, props.class
-    from sys.extended_properties as props
-    where (props.class = 3) and (name = N'MS_Description') and (props.minor_id = 0)
+    select props.object_id,  props.description, props.class
+    from extendedProperties as props
+    where (props.class = 3)
     union
-    select props.major_id as object_id, cast(props.value as nvarchar(2048)) as description, props.class
-    from sys.extended_properties as props
-    where (props.class = 6) and (name = N'MS_Description') and (props.minor_id = 0)
+    select props.object_id,  props.description, props.class
+    from extendedProperties as props
+    where (props.class = 6)
 )
 select info.catalog, info.[schema], info.name, info.type, info.definition,
        info.owner, info.uses_quoted_identifier, info.uses_ansi_nulls, info.description
@@ -431,7 +436,7 @@ from (
         end,
 
         [catalog] = db_name(),
-        [schema] = schema_name(objects.schema_id),
+        [schema] = schema_name(iif(objects.type = 'TT', tableTypes.schema_id, objects.schema_id)),
         [name] = iif(objects.type = 'TT', tableTypes.name, objects.name),
 
         [type] = case objects.type
